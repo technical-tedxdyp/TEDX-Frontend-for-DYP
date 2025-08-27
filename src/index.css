@@ -1,0 +1,205 @@
+@import "tailwindcss";
+
+/* Root and body styles */
+html, body {
+  scroll-behavior: smooth !important;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #0F0F0F;
+  color: white;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Content containers transparent for layered effect */
+section, div, article {
+  background-color: transparent;
+}
+
+/* Preserve backgrounds of interactive elements (use Tailwind bg classes in components for control) */
+@layer base {
+  button, a, input, textarea {
+    background-color: transparent; /* ya isko hata bhi sakte ho */
+  }
+}
+
+/* 🔥 Force black background only for mobile menu */
+.mobile-menu {
+  background-color: #000 !important; 
+}
+
+/* 🔥 Slide-down animation for mobile menu */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-slideDown {
+  animation: slideDown 0.3s ease-out forwards;
+}
+
+/* Hide scrollbar in horizontal scroll container */
+.speakers-container {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+}
+.speakers-container::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
+}
+
+/* Optional: Smoother focus rings for accessibility */
+input:focus, button:focus, textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #EB0028;
+}
+
+/* Optionally, custom scrollbars for overall dark theme */
+::-webkit-scrollbar {
+  width: 10px;
+  background: #181818;
+}
+::-webkit-scrollbar-thumb {
+  background: #222;
+  border-radius: 5px;
+}
+
+/* ----------- Card and Modal Styles ----------- */
+.ticket-card {
+  background: linear-gradient(135deg, #1a1621 0%, #231c2b 80%);
+  border-radius: 1.1rem;
+  box-shadow: 0 6px 32px 0 rgba(40,30,70,0.14);
+  border: 2px solid #312843;
+  padding: 2rem;
+  color: white;
+  transition: border-color 0.2s;
+}
+.ticket-card.selected {
+  border-color: #3772FF;
+  box-shadow: 0 3px 16px 0 #3772FF88;
+}
+.ticket-card.popular {
+  background: linear-gradient(135deg, #2d2250 0%, #47397a 100%);
+  border: 2px solid #5a42a0;
+}
+
+/* Save Tag Styles */
+.save-tag {
+  font-size: 0.85rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  font-weight: 600;
+  background: #EB0028;
+  color: #fff;
+  box-shadow: 0 2px 7px 0 #eb00285a;
+}
+
+/* Blurred Floating Circles */
+.bg-blur-circle {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(150px);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Registration form card */
+.form-card {
+  background: linear-gradient(135deg, #1c171e 0%, #23202d 100%);
+  border-radius: 1.2rem;
+  box-shadow: 0 8px 32px 0 rgba(34,28,50,0.20);
+  border: 2px solid #312843;
+  padding: 2rem;
+}
+
+/* Modal Styles */
+.modal-card {
+  background: #17131C;
+  border-radius: 1.2rem;
+  box-shadow: 0 6px 48px 0 rgba(34,28,50,0.28);
+  border: 2px solid #312843;
+  color: #fff;
+}
+
+/* Header Boxes */
+.header-box {
+  background: #EB0028;
+  border-radius: 0.7rem 0.7rem 0 0;
+  color: white;
+  text-align: center;
+}
+.header-box-value {
+  background: #000;
+  border-radius: 0 0 0.7rem 0.7rem;
+  font-weight: 600;
+  color: #fff;
+  padding: 1.2rem 0;
+}
+
+/* Buttons */
+.btn-primary {
+  background: linear-gradient(90deg,#EB0028 0,#ff5c39 100%);
+  color: #fff;
+  font-weight: 700;
+  border-radius: 0.7rem;
+  padding: 0.9rem 2.4rem;
+  box-shadow: 0 2px 12px 0 #eb002880;
+  transition: background 0.18s;
+}
+.btn-primary:hover {
+  background: linear-gradient(90deg,#c20021 0,#ff9561 100%);
+}
+
+/* Input fields */
+.form-card input, .form-card textarea {
+  background: #20182C;
+  border: 1.7px solid #382b4b;
+  color: #fff;
+  border-radius: 0.5rem;
+  font-size: 1.08rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  height: 2.75rem;
+}
+.form-card input:focus, .form-card textarea:focus {
+  border-color: #EB0028;
+  box-shadow: 0 0 0 2px #EB002844;
+}
+
+/* Labels */
+.form-card label {
+  color: #fff;
+  font-weight: 610;
+  margin-bottom: 0.37rem;
+  letter-spacing: 0.03rem;
+}
+
+/* Section Titles */
+.section-title {
+  color: #FFD9C0;
+  font-size: 2.35rem;
+  font-weight: bold;
+  letter-spacing: 0.08em;
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+/* Responsive helpers */
+@media (max-width: 768px) {
+  .ticket-card, .form-card, .modal-card {
+    padding: 1rem;
+    border-radius: 1rem;
+    box-shadow: 0 2px 10px 0 rgba(40,30,70,0.10);
+  }
+  .section-title {
+    font-size: 1.35rem;
+  }
+}
