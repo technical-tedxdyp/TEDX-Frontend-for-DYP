@@ -1,14 +1,19 @@
+# Create comprehensive .gitignore
+cat > .gitignore << 'EOF'
 # Dependencies
 node_modules/
 
 # Build outputs
 dist/
-build/
 .parcel-cache/
 
 # Logs
 *.log
 npm-debug.log*
+firebase-debug.log
+
+# Memory dumps
+heap-*.heapsnapshot
 
 # Environment files
 .env
@@ -22,5 +27,4 @@ Thumbs.db
 # Editor directories
 .vscode/
 .idea/
-node_modules/
-package-lock.json
+EOF

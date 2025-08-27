@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { Element } from "react-scroll";   // <-- Import Element
+import { Element } from "react-scroll";
 
 import Header from "./components/Header";
 import Home from "./components/Home";
@@ -27,13 +27,13 @@ function App() {
                 <Home />
               </Element>
 
-              {/* <Element name="theme">
-                {/* If you have a Theme component, place it here
+              {/* Uncomment and add Theme component when ready
+              <Element name="theme">
                 <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
                   <h1 className="text-4xl">Theme Section</h1>
-                </div> */}
-                
-             {/* </> </Element> */} 
+                </div>
+              </Element>
+              */}
 
               <Element name="speakers">
                 <Speakers />
@@ -53,4 +53,14 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+// Check if root element exists before rendering
+const rootElement = document.getElementById("root");
+if (rootElement) {
+  ReactDOM.createRoot(rootElement).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+} else {
+  console.error("Root element not found. Make sure your index.html has a div with id='root'");
+}
