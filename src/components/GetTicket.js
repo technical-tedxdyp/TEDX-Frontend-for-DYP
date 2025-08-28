@@ -281,545 +281,159 @@
 
 // export default TicketPage;
 
-const express = require("express");
-const router = express.Router();
-const crypto = require("crypto");
-const path = require("path");
-const fs = require("fs");
-const { createOrder } = require("./utils/razorpayUtils");
-const Ticket = require("./models/Ticket");
-const Counter = require("./models/Counter");
-const EventCapacity = require("./models/EventCapacity");
-const { sendTicketEmail } = require("./utils/email");
-const { appendRowToSheet } = require("./utils/googleSheetsService");
-const { connectDB, withTransaction } = require("./utils/db");
+const mongoose = require('mongoose');
 
-// Ensure DB connection once
-connectDB().catch(err => console.error("MongoDB connection error on startup:", err));
-
-const RZP_KEY_SECRET = process.env.TEDX_RAZORPAY_KEY_SECRET || "";
-const EVENT_ID = process.env.TEDX_EVENT_ID || "tedx-2025";
-const AUTO_SEED = String(process.env.TEDX_AUTO_SEED || "").toLowerCase() === "true";
-
-// ADDED: Initialize capacity document on server startup
-const initializeCapacity = async () => {
-  try {
-    const existing = await EventCapacity.findOne({ eventId: EVENT_ID });
-    if (!existing) {
-      await EventCapacity.create({
-        eventId: EVENT_ID,
-        totalSeats: 400,
-        fullDay: 0,
-        morningSingles: 0,
-        eveningSingles: 0,
-        version: 0,
-      });
-      console.log("🚀 Initialized capacity document for", EVENT_ID);
-    } else {
-      console.log("✅ Capacity document already exists for", EVENT_ID);
-    }
-  } catch (error) {
-    console.error("❌ Failed to initialize capacity:", error.message);
+const EventCapacitySchema = new mongoose.Schema(
+  {
+    // Unique event key
+    eventId: { type: String, required: true, unique: true, index: true, trim: true },
+    
+    // Seats configuration
+    totalSeats: { type: Number, required: true, min: 0 },      // e.g., 6
+    
+    // REMOVED: totalUnits and usedUnits - these were causing confusion
+    // We'll calculate availability directly from session counts
+    
+    // Session counters
+    fullDay:        { type: Number, default: 0, min: 0 },      // number of full-day tickets
+    morningSingles: { type: Number, default: 0, min: 0 },      // morning-only tickets
+    eveningSingles: { type: Number, default: 0, min: 0 },      // evening-only tickets
+    
+    // ADDED: Version field for optimistic concurrency control
+    version: { type: Number, default: 0, min: 0 },             // incremented on each update
+  },
+  { 
+    versionKey: false, // We're using our custom version field instead of __v
+    timestamps: true, 
+    toJSON: { virtuals: true }, 
+    toObject: { virtuals: true } 
   }
+);
+
+// Derived availability calculations (not stored in database)
+EventCapacitySchema.virtual('morningAvailable').get(function () {
+  return Math.max(0, this.totalSeats - (this.fullDay + this.morningSingles));
+});
+
+EventCapacitySchema.virtual('eveningAvailable').get(function () {
+  return Math.max(0, this.totalSeats - (this.fullDay + this.eveningSingles));
+});
+
+EventCapacitySchema.virtual('fullDayAvailable').get(function () {
+  // A full-day seat requires a seat available in BOTH morning and evening
+  return Math.min(this.morningAvailable, this.eveningAvailable);
+});
+
+// ADDED: Virtual for total occupied seats (useful for debugging)
+EventCapacitySchema.virtual('totalOccupied').get(function () {
+  return Math.max(
+    this.fullDay + this.morningSingles, // morning session occupancy
+    this.fullDay + this.eveningSingles  // evening session occupancy
+  );
+});
+
+// Defensive normalization and validation
+EventCapacitySchema.pre('validate', function (next) {
+  // Ensure totalSeats is valid
+  if (!Number.isFinite(this.totalSeats) || this.totalSeats < 0) {
+    this.totalSeats = 400; // Default to 6 seats
+  }
+  
+  // Ensure version is valid
+  if (!Number.isFinite(this.version) || this.version < 0) {
+    this.version = 0;
+  }
+  
+  // Ensure all counters are non-negative integers
+  for (const field of ['fullDay', 'morningSingles', 'eveningSingles']) {
+    const value = Number(this[field]);
+    this[field] = Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
+  }
+  
+  // ADDED: Validation to prevent logical inconsistencies
+  const morningOccupied = this.fullDay + this.morningSingles;
+  const eveningOccupied = this.fullDay + this.eveningSingles;
+  
+  if (morningOccupied > this.totalSeats) {
+    return next(new Error(`Morning sessions exceed total seats: ${morningOccupied} > ${this.totalSeats}`));
+  }
+  
+  if (eveningOccupied > this.totalSeats) {
+    return next(new Error(`Evening sessions exceed total seats: ${eveningOccupied} > ${this.totalSeats}`));
+  }
+  
+  next();
+});
+
+// ADDED: Pre-save middleware to increment version on updates
+EventCapacitySchema.pre('save', function(next) {
+  // Only increment version if this is an update (not initial creation)
+  if (!this.isNew && this.isModified(['fullDay', 'morningSingles', 'eveningSingles', 'totalSeats'])) {
+    this.version += 1;
+  }
+  next();
+});
+
+// ADDED: Static method for atomic seat reservation with version check
+EventCapacitySchema.statics.reserveSeat = async function(eventId, sessionType, transactionSession) {
+  const filter = { eventId };
+  let inc = { version: 1 };
+  
+  // Get current capacity first
+  const currentCap = await this.findOne(filter, null, { session: transactionSession });
+  if (!currentCap) {
+    throw new Error('EVENT_NOT_FOUND');
+  }
+  
+  // Check availability and set increment based on session type
+  if (sessionType === 'fullDay') {
+    const morningOccupied = currentCap.fullDay + currentCap.morningSingles;
+    const eveningOccupied = currentCap.fullDay + currentCap.eveningSingles;
+    
+    if (morningOccupied >= currentCap.totalSeats || eveningOccupied >= currentCap.totalSeats) {
+      throw new Error('SOLD_OUT');
+    }
+    inc.fullDay = 1;
+  } else if (sessionType === 'morning') {
+    const morningOccupied = currentCap.fullDay + currentCap.morningSingles;
+    if (morningOccupied >= currentCap.totalSeats) {
+      throw new Error('SOLD_OUT');
+    }
+    inc.morningSingles = 1;
+  } else if (sessionType === 'evening') {
+    const eveningOccupied = currentCap.fullDay + currentCap.eveningSingles;
+    if (eveningOccupied >= currentCap.totalSeats) {
+      throw new Error('SOLD_OUT');
+    }
+    inc.eveningSingles = 1;
+  } else {
+    throw new Error('INVALID_SESSION_TYPE');
+  }
+  
+  // Atomic update with version check (optimistic concurrency control)
+  const updatedCap = await this.findOneAndUpdate(
+    { 
+      eventId,
+      version: currentCap.version // This ensures no other transaction modified the document
+    },
+    { $inc: inc },
+    { 
+      new: true, 
+      session: transactionSession,
+      runValidators: true 
+    }
+  );
+  
+  if (!updatedCap) {
+    throw new Error('SOLD_OUT'); // Version conflict or capacity exceeded
+  }
+  
+  return updatedCap;
 };
 
-// Initialize capacity on startup
-initializeCapacity();
+// Indexes for performance
+EventCapacitySchema.index({ eventId: 1, version: 1 }); // For atomic updates
+EventCapacitySchema.index({ eventId: 1, updatedAt: -1 }); // For reporting
 
-// UPDATED: Enhanced availability check with debugging and null safety
-async function checkSessionAvailability(session) {
-  const cap = await EventCapacity.findOne({ eventId: EVENT_ID }).lean();
-  
-  console.log("🔍 Checking availability:", {
-    session,
-    eventId: EVENT_ID,
-    capacityFound: !!cap,
-    totalSeats: cap?.totalSeats,
-    fullDay: cap?.fullDay,
-    morningSingles: cap?.morningSingles,
-    eveningSingles: cap?.eveningSingles,
-    version: cap?.version
-  });
-
-  if (!cap) {
-    console.log("❌ No capacity document found for eventId:", EVENT_ID);
-    return false;
-  }
-
-  // Use null coalescing to handle undefined fields gracefully
-  const morningOccupied = (cap.fullDay || 0) + (cap.morningSingles || 0);
-  const eveningOccupied = (cap.fullDay || 0) + (cap.eveningSingles || 0);
-  
-  const morningAvailable = Math.max(0, (cap.totalSeats || 0) - morningOccupied);
-  const eveningAvailable = Math.max(0, (cap.totalSeats || 0) - eveningOccupied);
-  const fullDayAvailable = Math.min(morningAvailable, eveningAvailable);
-
-  console.log("📊 Availability calculation:", {
-    totalSeats: cap.totalSeats,
-    morningOccupied,
-    eveningOccupied,
-    morningAvailable,
-    eveningAvailable,
-    fullDayAvailable
-  });
-
-  let result = false;
-  switch (session) {
-    case "morning":
-      result = morningAvailable > 0;
-      console.log(`Morning session available: ${result} (${morningAvailable} seats)`);
-      break;
-    case "evening":
-      result = eveningAvailable > 0;
-      console.log(`Evening session available: ${result} (${eveningAvailable} seats)`);
-      break;
-    case "fullDay":
-      result = fullDayAvailable > 0;
-      console.log(`Full day session available: ${result} (${fullDayAvailable} seats)`);
-      break;
-    default:
-      console.log("❌ Invalid session type:", session);
-      result = false;
-  }
-
-  return result;
-}
-
-// GET /api/payment/availability
-router.get("/availability", async (req, res) => {
-  try {
-    const cap = await EventCapacity.findOne({ eventId: EVENT_ID }).lean();
-    if (!cap) {
-      console.log("⚠️ No capacity document found in availability endpoint");
-      return res.status(200).json({
-        eventId: EVENT_ID,
-        totalSeats: 0,
-        fullDay: 0,
-        morningSingles: 0,
-        eveningSingles: 0,
-        morningAvailable: 0,
-        eveningAvailable: 0,
-        fullDayAvailable: 0,
-        status: "missing",
-      });
-    }
-
-    // Calculate based on session occupancy with null safety
-    const morningOccupied = (cap.fullDay || 0) + (cap.morningSingles || 0);
-    const eveningOccupied = (cap.fullDay || 0) + (cap.eveningSingles || 0);
-    
-    const morningAvailable = Math.max(0, (cap.totalSeats || 0) - morningOccupied);
-    const eveningAvailable = Math.max(0, (cap.totalSeats || 0) - eveningOccupied);
-    const fullDayAvailable = Math.min(morningAvailable, eveningAvailable);
-
-    return res.status(200).json({
-      eventId: EVENT_ID,
-      totalSeats: cap.totalSeats || 0,
-      version: cap.version || 0,
-      fullDay: cap.fullDay || 0,
-      morningSingles: cap.morningSingles || 0,
-      eveningSingles: cap.eveningSingles || 0,
-      morningOccupied,
-      eveningOccupied,
-      morningAvailable,
-      eveningAvailable,
-      fullDayAvailable,
-      status: (morningAvailable > 0 || eveningAvailable > 0) ? "available" : "soldout",
-    });
-  } catch (e) {
-    console.error("Availability check error:", e?.message || e);
-    return res.status(500).json({ error: e?.message || "availability failed" });
-  }
-});
-
-// POST /api/payment/create-order - ENHANCED: Stricter availability check
-router.post("/create-order", async (req, res) => {
-  try {
-    const { amount, session } = req.body;
-    const num = Number(amount);
-    
-    console.log("🎫 Create order request:", { amount, session, eventId: EVENT_ID });
-    
-    if (!Number.isFinite(num) || num <= 0) {
-      console.log("❌ Invalid amount:", amount);
-      return res.status(400).json({ error: "Valid amount is required" });
-    }
-    
-    if (!session || !["morning", "evening", "fullDay"].includes(session)) {
-      console.log("❌ Invalid session:", session);
-      return res.status(400).json({ error: "Valid session type is required" });
-    }
-
-    // CRITICAL: Double-check availability immediately before creating Razorpay order
-    console.log("🔄 Performing fresh availability check before creating order...");
-    const cap = await EventCapacity.findOne({ eventId: EVENT_ID }).lean();
-    
-    if (!cap) {
-      console.log("❌ No capacity document found");
-      return res.status(500).json({ error: "System not ready. Please try again." });
-    }
-
-    const morningOccupied = (cap.fullDay || 0) + (cap.morningSingles || 0);
-    const eveningOccupied = (cap.fullDay || 0) + (cap.eveningSingles || 0);
-    const morningAvailable = Math.max(0, (cap.totalSeats || 0) - morningOccupied);
-    const eveningAvailable = Math.max(0, (cap.totalSeats || 0) - eveningOccupied);
-    const fullDayAvailable = Math.min(morningAvailable, eveningAvailable);
-
-    let available = false;
-    switch (session) {
-      case "morning":
-        available = morningAvailable > 0;
-        break;
-      case "evening":
-        available = eveningAvailable > 0;
-        break;
-      case "fullDay":
-        available = fullDayAvailable > 0;
-        break;
-    }
-
-    console.log("📊 Fresh availability check result:", {
-      session,
-      morningAvailable,
-      eveningAvailable,
-      fullDayAvailable,
-      available
-    });
-    
-    if (!available) {
-      console.log("🚫 BLOCKING PAYMENT: No seats available for", session);
-      return res.status(409).json({ 
-        error: "Seats are full", 
-        message: `All seats are sold out for the ${session} session. Please try a different session.` 
-      });
-    }
-
-    console.log("✅ Seats available, creating Razorpay order...");
-    // Create order only if seats are available
-    const order = await createOrder(num);
-    console.log("✅ Razorpay order created:", order.id);
-    return res.json(order);
-  } catch (err) {
-    console.error("Error creating order:", err?.message || err);
-    return res.status(500).json({ error: "Failed to create order" });
-  }
-});
-
-// Helper: sequential ticket ids
-async function getNextSequenceValue(sequenceName, session = null) {
-  const counter = await Counter.findOneAndUpdate(
-    { _id: sequenceName },
-    { $inc: { sequence_value: 1 } },
-    { new: true, upsert: true, session: session || undefined, setDefaultsOnInsert: true }
-  );
-  return counter.sequence_value;
-}
-
-// POST /api/payment/verify - ENHANCED: Transaction retry logic with better concurrency control
-router.post("/verify", async (req, res) => {
-  try {
-    const {
-      razorpay_order_id,
-      razorpay_payment_id,
-      razorpay_signature,
-      name,
-      email,
-      phone,
-      department,
-      branch,
-      session, // 'morning' | 'evening' | 'fullDay'
-      amount,
-    } = req.body;
-
-    console.log("💳 Payment verification started:", { razorpay_payment_id, session, amount });
-
-    // Validate required fields
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !name || !email || !phone || !session || amount == null) {
-      return res.status(400).json({ success: false, message: "Missing required fields" });
-    }
-
-    if (!["morning", "evening", "fullDay"].includes(session)) {
-      return res.status(400).json({ success: false, message: "Invalid session type" });
-    }
-
-    if (!RZP_KEY_SECRET) {
-      return res.status(500).json({ success: false, message: "Payment secret not configured" });
-    }
-
-    // Signature verification
-    const expected = crypto.createHmac("sha256", RZP_KEY_SECRET)
-      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-      .digest("hex");
-    if (expected !== razorpay_signature) {
-      return res.status(400).json({ success: false, message: "Invalid payment signature" });
-    }
-
-    // Idempotency check
-    const existing = await Ticket.findOne({ razorpayPaymentId: razorpay_payment_id }).lean();
-    if (existing) {
-      console.log("♻️ Payment already processed:", existing.ticketId);
-      return res.json({
-        success: true,
-        message: "Payment already processed",
-        ticketId: existing.ticketId,
-        session: existing.session,
-      });
-    }
-
-    // CRITICAL FIX: Always ensure capacity document exists
-    let snap = await EventCapacity.findOne({ eventId: EVENT_ID }).lean();
-    if (!snap) {
-      console.log("🌱 Capacity document missing! Creating new one...");
-      try {
-        await EventCapacity.create({
-          eventId: EVENT_ID,
-          totalSeats: 400,
-          fullDay: 0,
-          morningSingles: 0,
-          eveningSingles: 0,
-          version: 0,
-        });
-        console.log("✅ Created missing capacity document for", EVENT_ID);
-        snap = await EventCapacity.findOne({ eventId: EVENT_ID }).lean();
-      } catch (createError) {
-        console.error("❌ Failed to create capacity document:", createError.message);
-        return res.status(500).json({ 
-          success: false, 
-          message: "System initialization failed. Please try again." 
-        });
-      }
-    } else {
-      console.log("✅ Capacity document exists:", {
-        totalSeats: snap.totalSeats,
-        fullDay: snap.fullDay,
-        morningSingles: snap.morningSingles,
-        eveningSingles: snap.eveningSingles,
-        version: snap.version
-      });
-    }
-
-    // ENHANCED: Reserve capacity with retry logic and transaction
-    let ticketDoc;
-    await withTransaction(async (txn) => {
-      let attempts = 0;
-      const maxAttempts = 5;
-      
-      while (attempts < maxAttempts) {
-        try {
-          console.log(`🔒 Starting transaction attempt ${attempts + 1}/${maxAttempts} for seat reservation...`);
-          
-          // Use the reserveSeat method with optimistic concurrency control
-          const updatedCap = await EventCapacity.reserveSeat(EVENT_ID, session, txn);
-          console.log(`✅ Reserved seat for ${session}. New capacity:`, {
-            fullDay: updatedCap.fullDay,
-            morningSingles: updatedCap.morningSingles,
-            eveningSingles: updatedCap.eveningSingles,
-            version: updatedCap.version
-          });
-
-          const seq = await getNextSequenceValue("ticketId", txn);
-          const humanCode = `TEDX-${String(seq).padStart(5, "0")}`;
-
-          ticketDoc = await Ticket.create([{
-            ticketId: humanCode,
-            razorpayOrderId: razorpay_order_id,
-            razorpayPaymentId: razorpay_payment_id,
-            razorpaySignature: razorpay_signature,
-            name,
-            email: email?.toLowerCase(),
-            phone,
-            department: department || "",
-            branch: branch || "",
-            session,
-            amount: Number(amount),
-          }], { session: txn });
-
-          ticketDoc = ticketDoc[0]; // Extract from array when using session
-          console.log("🎫 Ticket created successfully:", humanCode);
-          
-          // Success - break out of retry loop
-          break;
-          
-        } catch (error) {
-          attempts++;
-          console.error(`❌ Reservation attempt ${attempts}/${maxAttempts} failed for ${session}:`, error.message);
-          
-          if (error.message === 'SOLD_OUT') {
-            console.log("🚫 Session is sold out - no retries needed");
-            throw new Error("SOLD_OUT"); // Don't retry for sold out
-          }
-          
-          if (error.message === 'EVENT_NOT_FOUND') {
-            console.error("❌ EventCapacity document missing during transaction");
-            throw new Error("SYSTEM_ERROR");
-          }
-          
-          // For version conflicts or other transient errors, retry
-          if (attempts >= maxAttempts) {
-            console.error(`❌ Max retry attempts (${maxAttempts}) exceeded for ${session}`);
-            throw new Error("SOLD_OUT"); // Treat as sold out after max retries
-          }
-          
-          // Exponential backoff delay before retry
-          const delay = Math.min(100 * Math.pow(2, attempts - 1), 1000);
-          console.log(`⏳ Retrying in ${delay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-      }
-    });
-
-    // Log to Google Sheets (best effort)
-    try {
-      const t = (typeof ticketDoc?.toObject === "function" ? ticketDoc.toObject() : ticketDoc) || {};
-      const createdAtISO = (t.createdAt ? new Date(t.createdAt) : new Date()).toISOString();
-      await appendRowToSheet([
-        t.name || name,
-        (t.email || email || "").toLowerCase(),
-        t.phone || phone || "",
-        t.department || department || "",
-        t.branch || branch || "",
-        t.session || session,
-        typeof t.amount === "number" ? t.amount : Number(amount),
-        t.razorpayOrderId || razorpay_order_id,
-        t.razorpayPaymentId || razorpay_payment_id,
-        t.ticketId,
-        createdAtISO,
-      ]);
-      console.log("📊 Logged to Google Sheets successfully");
-    } catch (e) {
-      console.warn("⚠️ Sheets append failed (non-fatal):", e?.message || e);
-    }
-
-    // Success response
-    return res.json({
-      success: true,
-      message: "Payment verified; ticket will be emailed from success page",
-      ticketId: ticketDoc.ticketId,
-      session,
-      razorpayPaymentId: razorpay_payment_id,
-    });
-  } catch (err) {
-    if (err && err.message === "SOLD_OUT") {
-      console.log("🚫 Transaction failed - seats full during payment verification");
-      return res.status(409).json({ success: false, message: "Seats are full for this session" });
-    }
-    if (err && err.message === "SYSTEM_ERROR") {
-      console.log("🚫 Transaction failed - system initialization error");
-      return res.status(500).json({ success: false, message: "System error. Please contact support." });
-    }
-    if (err?.code === 11000 && err?.keyPattern?.razorpayPaymentId) {
-      const dup = await Ticket.findOne({ razorpayPaymentId: req.body.razorpay_payment_id }).lean();
-      return res.json({ success: true, message: "Payment already processed", ticketId: dup?.ticketId, session: dup?.session });
-    }
-    console.error("❌ Error verifying payment:", err?.message || err);
-    if (err?.stack) console.error(err.stack);
-    return res.status(500).json({ success: false, message: "Failed to verify payment" });
-  }
-});
-
-// POST /api/payment/send-ticket - Send client-generated ticket via email with Payment ID
-router.post("/send-ticket", async (req, res) => {
-  try {
-    const { 
-      email, 
-      name, 
-      session, 
-      amount, 
-      ticketId, 
-      razorpayPaymentId,
-      pdfBase64,     
-      useClientPdf,  
-      ticketImage    
-    } = req.body;
-
-    console.log("📧 /send-ticket called with:", {
-      email,
-      ticketId,
-      razorpayPaymentId,
-      useClientPdf,
-      hasPdfBase64: !!pdfBase64,
-      hasTicketImage: !!ticketImage
-    });
-
-    // Validate required fields
-    if (!email || !ticketId) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Missing required fields: email and ticketId" 
-      });
-    }
-
-    // Ensure we have client-generated content
-    if (!useClientPdf || !ticketImage) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing client-generated content: useClientPdf and ticketImage required"
-      });
-    }
-
-    console.log("📧 Sending CLIENT-generated ticket via email");
-
-    await sendTicketEmail({
-      email,
-      name: name || "Guest",
-      session: session || "—",
-      amount,
-      ticketId,
-      razorpayPaymentId: razorpayPaymentId || "—",
-      ticketImage
-    });
-
-    // Save PDF to disk for backup/audit (optional)
-    if (pdfBase64) {
-      try {
-        const ticketsDir = path.join(__dirname, "..", "tickets");
-        if (!fs.existsSync(ticketsDir)) fs.mkdirSync(ticketsDir, { recursive: true });
-        const filePath = path.join(ticketsDir, `TEDx-Ticket-${ticketId}.pdf`);
-        const pdfBuffer = Buffer.from(pdfBase64, "base64");
-        fs.writeFileSync(filePath, pdfBuffer);
-        console.log("💾 Saved client PDF to", filePath);
-      } catch (e) {
-        console.warn("⚠ Could not save PDF to disk:", e?.message || e);
-      }
-    }
-
-    return res.json({ 
-      success: true, 
-      message: "Client-generated ticket sent via email successfully" 
-    });
-    
-  } catch (e) {
-    console.error("Error in send-ticket:", e?.message || e);
-    return res.status(500).json({ 
-      success: false, 
-      message: "Failed to send ticket: " + (e?.message || "Unknown error")
-    });
-  }
-});
-
-// GET /api/tickets/:ticketId - Get ticket info for session recovery
-router.get("/tickets/:ticketId", async (req, res) => {
-  try {
-    const { ticketId } = req.params;
-    const ticket = await Ticket.findOne({ ticketId }).lean();
-    
-    if (!ticket) {
-      return res.status(404).json({ error: "Ticket not found" });
-    }
-    
-    res.json({
-      ticketId: ticket.ticketId,
-      session: ticket.session,
-      name: ticket.name,
-      email: ticket.email,
-      phone: ticket.phone,
-      amount: ticket.amount,
-      razorpayPaymentId: ticket.razorpayPaymentId,
-    });
-  } catch (err) {
-    console.error("Error fetching ticket:", err);
-    res.status(500).json({ error: "Failed to fetch ticket" });
-  }
-});
-
-module.exports = router;
+// Reuse if already compiled to avoid OverwriteModelError
+module.exports = mongoose.models.EventCapacity || mongoose.model('EventCapacity', EventCapacitySchema);
