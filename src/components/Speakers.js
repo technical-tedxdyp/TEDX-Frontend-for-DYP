@@ -48,8 +48,8 @@ const speakers = [
     id: 6,
     name: "Mrs. Bela Shende",
     title: "Bela Shende is an Indian playback singer who has performed across Bollywood and other Indian film industries.", // ADDED title
-    small: "https://res.cloudinary.com/doyldj2th/image/upload/v1756206220/Group_25_1__11zon_1_cniji0.png",
-    big: "https://res.cloudinary.com/doyldj2th/image/upload/v1756206220/Group_25_1__11zon_1_cniji0.png",
+    small: "https://res.cloudinary.com/doyldj2th/image/upload/v1756370896/images_1_vnovsg.jpg",
+    big: "https://res.cloudinary.com/doyldj2th/image/upload/v1756370896/images_1_vnovsg.jpg",
   },
 ];
 
