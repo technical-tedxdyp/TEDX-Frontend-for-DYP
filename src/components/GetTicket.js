@@ -336,7 +336,7 @@ EventCapacitySchema.virtual('totalOccupied').get(function () {
 EventCapacitySchema.pre('validate', function (next) {
   // Ensure totalSeats is valid
   if (!Number.isFinite(this.totalSeats) || this.totalSeats < 0) {
-    this.totalSeats = 6; // Default to 6 seats
+    this.totalSeats = 400; // Default to 6 seats
   }
   
   // Ensure version is valid
