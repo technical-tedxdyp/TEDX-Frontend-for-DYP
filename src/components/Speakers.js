@@ -203,8 +203,8 @@ const speakers = [
     name: "Dr. Popatrao Pawar",
     title:
       "Dr. Popatrao Baguji Pawar, Padma Shri awardee, is the former sarpanch of Hiware Bazar, Maharashtra.He transformed the drought-prone village into a model of sustainable rural development through water conservation and social reforms.",
-    small: "https://res.cloudinary.com/doyldj2th/image/upload/v1756490474/WhatsApp_Image_2025-08-29_at_19.03.30_72b3e107_gha0ix.jpg",
-    big: "https://res.cloudinary.com/doyldj2th/image/upload/v1756490474/WhatsApp_Image_2025-08-29_at_19.03.30_72b3e107_gha0ix.jpg",
+    small: "https://github.com/technical-tedxdyp/speakerd-image/blob/main/speaker1.png?raw=true",
+    big: "https://github.com/technical-tedxdyp/speakerd-image/blob/main/speaker1.png?raw=true",
   },
   {
     id: 2,
@@ -219,8 +219,8 @@ const speakers = [
     name: "Mr. Nitin Pandey",
     title:
       "Chairman of the National Information Security Council and founder of Hackers Day. CEO and chief trainer at Cybershristi Infosolutions Pvt. Ltd.",
-    small: "https://github.com/technical-tedxdyp/speakerd-image/blob/main/speaker3.jpg?raw=true",
-    big: "https://github.com/technical-tedxdyp/speakerd-image/blob/main/speaker3.jpg?raw=true",
+    small: "https://res.cloudinary.com/doyldj2th/image/upload/v1756490474/WhatsApp_Image_2025-08-29_at_19.03.30_72b3e107_gha0ix.jpg",
+    big: "https://res.cloudinary.com/doyldj2th/image/upload/v1756490474/WhatsApp_Image_2025-08-29_at_19.03.30_72b3e107_gha0ix.jpg",
   },
   {
     id: 4,
