@@ -201,19 +201,19 @@
 
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import lenis from "../lenis";
+// REMOVED: import lenis from "../lenis";
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-
   const location = useLocation();
   const navigate = useNavigate();
 
+  // UPDATED: Native smooth scroll function (replaces lenis.scrollTo)
   const scrollToSection = (id) => {
     const el = document.getElementById(id);
     if (el) {
-      lenis.scrollTo(el);
+      el.scrollIntoView({ behavior: "smooth" });
       setIsOpen(false);
     }
   };
@@ -226,15 +226,6 @@ export default function Header() {
       navigate("/", { state: { scrollTo: "home" } });
     }
   };
-
-  // // 🔥 Theme button
-  // const handleThemeClick = () => {
-  //   if (location.pathname === "/") {
-  //     scrollToSection("theme");
-  //   } else {
-  //     navigate("/", { state: { scrollTo: "theme" } });
-  //   }
-  // };
 
   // 🔥 Speakers button
   const handleSpeakersClick = () => {
@@ -266,21 +257,18 @@ export default function Header() {
   useEffect(() => {
     if (location.pathname === "/") {
       let section = null;
-
       // case 1: navigate with state
       if (location.state?.scrollTo) {
         section = location.state.scrollTo;
       }
-
       // case 2: direct /#id navigation
       if (location.hash) {
         section = location.hash.replace("#", "");
       }
-
       if (section) {
         setTimeout(() => {
           scrollToSection(section);
-        }, 300); // thoda delay taaki page render ho jaye
+        }, 300); // delay for page render
       }
     }
   }, [location]);
@@ -311,14 +299,6 @@ export default function Header() {
           Home
         </button>
 
-        {/* ✅ Theme
-        <button
-          onClick={handleThemeClick}
-          className="hover:text-[#EB0028] transition"
-        >
-          Theme
-        </button> */}
-
         {/* ✅ Speakers */}
         <button
           onClick={handleSpeakersClick}
@@ -335,7 +315,7 @@ export default function Header() {
           Sponsors
         </button>
 
-        {/* ✅ Blog (new button, no action yet) */}
+        {/* ✅ Blog (placeholder) */}
         <button
           onClick={() => {}}
           className="hover:text-[#EB0028] transition"
@@ -356,7 +336,11 @@ export default function Header() {
 
       {/* Mobile Hamburger */}
       <div className="md:hidden">
-        <button onClick={() => setIsOpen(!isOpen)} className="focus:outline-none">
+        <button 
+          onClick={() => setIsOpen(!isOpen)} 
+          className="focus:outline-none"
+          aria-label="Toggle menu"
+        >
           <svg
             className="w-6 h-6"
             fill="none"
@@ -392,17 +376,6 @@ export default function Header() {
             Home
           </button>
 
-          {/* ✅ Theme
-          <button
-            onClick={() => {
-              handleThemeClick();
-              setIsOpen(false);
-            }}
-            className="text-white hover:text-[#EB0028] transition"
-          >
-            Theme
-          </button> */}
-
           {/* ✅ Speakers */}
           <button
             onClick={() => {
@@ -425,7 +398,7 @@ export default function Header() {
             Sponsors
           </button>
 
-          {/* ✅ Blog (no action yet) */}
+          {/* ✅ Blog */}
           <button
             onClick={() => {
               setIsOpen(false);
@@ -439,11 +412,11 @@ export default function Header() {
           <Link
             to="/get-ticket"
             onClick={() => setIsOpen(false)}
-            className="ml-4 relative group overflow-hidden px-4 py-2 rounded-2xl text-sm lg:text-base 
+            className="ml-4 px-4 py-2 rounded-2xl text-sm lg:text-base 
                        bg-[#EB0028] text-white transition-all duration-300 
                        hover:bg-[#800002] active:bg-[#400001]"
           >
-            <span className="relative z-10">Get Tickets</span>
+            Get Tickets
           </Link>
         </div>
       )}
