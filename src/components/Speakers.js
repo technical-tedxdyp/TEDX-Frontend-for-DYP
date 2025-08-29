@@ -236,9 +236,9 @@ const speakers = [
     title:
       "Bela Shende is an Indian playback singer who has performed across Bollywood and other Indian film industries.",
     small:
-      "https://scontent.fsse2-1.fna.fbcdn.net/v/t39.30808-6/481770639_1196489948502832_1950268749974958896_n.jpg?_nc_cat=111&ccb=1-7&_nc_sid=127cfc&_nc_ohc=IZX2bvaVrzQQ7kNvwGaSP3t&_nc_oc=AdlPjQNao3u9s07ao1GB3_GSuk0KcfF9staGhGiH1i8hIxSpZZne-U8c-Q6UutKpnOYwRGvlZwIhsCcxNW38njyE&_nc_zt=23&_nc_ht=scontent.fsse2-1.fna&_nc_gid=Baa9q07IPsh9_jENpYZ0Dg&oh=00_AfWchcEIjWn5T8l8RL_CW0Noj5CLZ9ZRdOIUT5RRIC_7_g&oe=68AF9194",
+      "https://res.cloudinary.com/doyldj2th/image/upload/v1756370896/images_1_vnovsg.jpg",
     big:
-      "https://scontent.fsse2-1.fna.fbcdn.net/v/t39.30808-6/481770639_1196489948502832_1950268749974958896_n.jpg?_nc_cat=111&ccb=1-7&_nc_sid=127cfc&_nc_ohc=IZX2bvaVrzQQ7kNvwGaSP3t&_nc_oc=AdlPjQNao3u9s07ao1GB3_GSuk0KcfF9staGhGiH1i8hIxSpZZne-U8c-Q6UutKpnOYwRGvlZwIhsCcxNW38njyE&_nc_zt=23&_nc_ht=scontent.fsse2-1.fna&_nc_gid=Baa9q07IPsh9_jENpYZ0Dg&oh=00_AfWchcEIjWn5T8l8RL_CW0Noj5CLZ9ZRdOIUT5RRIC_7_g&oe=68AF9194",
+      "https://res.cloudinary.com/doyldj2th/image/upload/v1756370896/images_1_vnovsg.jpg",
   },
 ];
 
