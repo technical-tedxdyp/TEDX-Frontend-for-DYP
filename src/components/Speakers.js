@@ -232,7 +232,7 @@ const speakers = [
   },
   {
     id: 5,
-    name: "Mrs. Bela Shende",
+    name: "Miss Bela Shende",
     title:
       "Bela Shende is an Indian playback singer who has performed across Bollywood and other Indian film industries.",
     small:
