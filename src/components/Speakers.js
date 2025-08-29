@@ -227,8 +227,8 @@ const speakers = [
     name: "Mrs. Aishwarya Pissay",
     title:
       " Aishwarya Pissay (born 14 August 1995) is an Indian motorsports athlete from Karnataka who competes in circuit and off-road motorcycle racing. ",
-    small: "https://github.com/technical-tedxdyp/speakerd-image/blob/main/speaker5.jpg?raw=true",
-    big: "https://github.com/technical-tedxdyp/speakerd-image/blob/main/speaker5.jpg?raw=true",
+    small: "https://res.cloudinary.com/doyldj2th/image/upload/v1756490157/63215613-14D3-4A61-BA71-1B0B3FB5CEA1_11zon_emi8wk.jpg",
+    big: "https://res.cloudinary.com/doyldj2th/image/upload/v1756490157/63215613-14D3-4A61-BA71-1B0B3FB5CEA1_11zon_emi8wk.jpg",
   },
   {
     id: 5,
