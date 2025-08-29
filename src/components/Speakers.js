@@ -203,8 +203,8 @@ const speakers = [
     name: "Dr. Popatrao Pawar",
     title:
       "Dr. Popatrao Baguji Pawar, Padma Shri awardee, is the former sarpanch of Hiware Bazar, Maharashtra.He transformed the drought-prone village into a model of sustainable rural development through water conservation and social reforms.",
-    small: "https://github.com/technical-tedxdyp/speakerd-image/blob/main/speaker1.png?raw=true",
-    big: "https://github.com/technical-tedxdyp/speakerd-image/blob/main/speaker1.png?raw=true",
+    small: "https://res.cloudinary.com/doyldj2th/image/upload/v1756494430/IMG_0374.jpeg_cbkpku.jpg",
+    big: "https://res.cloudinary.com/doyldj2th/image/upload/v1756494430/IMG_0374.jpeg_cbkpku.jpg",
   },
   {
     id: 2,
