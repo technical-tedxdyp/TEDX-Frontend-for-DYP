@@ -236,9 +236,9 @@ const speakers = [
     title:
       "Bela Shende is an Indian playback singer who has performed across Bollywood and other Indian film industries.",
     small:
-      "https://res.cloudinary.com/doyldj2th/image/upload/v1756370896/images_1_vnovsg.jpg",
+      "https://res.cloudinary.com/doyldj2th/image/upload/v1756495219/WhatsApp_Image_2025-08-29_at_19.03.31_42f0b435_kfxedg.jpg",
     big:
-      "https://res.cloudinary.com/doyldj2th/image/upload/v1756370896/images_1_vnovsg.jpg",
+      "https://res.cloudinary.com/doyldj2th/image/upload/v1756495219/WhatsApp_Image_2025-08-29_at_19.03.31_42f0b435_kfxedg.jpg",
   },
 ];
 
