@@ -2370,7 +2370,7 @@ const SESSIONS = [
 ];
 
 // FIXED: Use your live Razorpay key directly
-const RAZORPAY_KEY_ID = "rzp_live_RAdCru2UL8q5u1";
+const RAZORPAY_KEY_ID = "rzp_test_KzB4idWWnf33y2";
 
 const InfoBox = ({ title, value }) => (
   <div className="header-box flex flex-col w-full min-w-[240px] max-w-[340px] border-2 border-[#EB0028] overflow-hidden mx-3 mb-3 rounded-2xl shadow-lg">
