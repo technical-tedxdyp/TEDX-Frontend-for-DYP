@@ -2320,7 +2320,7 @@ import React, { useEffect, useState, useRef } from "react";
 // Map UI labels to backend keys
 const SESSION_KEY = {
   "Morning Session": "morning",
-  "Full Day Session": "fullDay", 
+  "Full Day Session": "fullDay",
   "Evening Session": "evening",
 };
 
@@ -2369,10 +2369,6 @@ const SESSIONS = [
   },
 ];
 
-// ✅ FIXED: Corrected API key with test mode fallback
-const RAZORPAY_KEY_ID = "rzp_live_RAdCru2UL8q5u1";
-// const RAZORPAY_KEY_ID = "rzp_test_YOUR_TEST_KEY"; // Uncomment for testing account issues
-
 const InfoBox = ({ title, value }) => (
   <div className="header-box flex flex-col w-full min-w-[240px] max-w-[340px] border-2 border-[#EB0028] overflow-hidden mx-3 mb-3 rounded-2xl shadow-lg">
     <div className="p-6 font-bold text-2xl bg-[#EB0028] text-white">{title}</div>
@@ -2380,6 +2376,7 @@ const InfoBox = ({ title, value }) => (
   </div>
 );
 
+// MERGED: SessionCard with sold out status and enhanced UI
 const SessionCard = ({ session, onSelect, isSelected, isSoldOut }) => (
   <div
     className={`ticket-card ${session.popular ? "popular" : ""} ${
@@ -2401,6 +2398,7 @@ const SessionCard = ({ session, onSelect, isSelected, isSoldOut }) => (
       </span>
     )}
     
+    {/* SOLD OUT badge */}
     {isSoldOut && (
       <span className="absolute -top-4 right-4 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">
         SOLD OUT
@@ -2412,6 +2410,8 @@ const SessionCard = ({ session, onSelect, isSelected, isSoldOut }) => (
     </div>
     
     <h3 className="text-2xl font-bold mb-4 text-white text-center">{session.name}</h3>
+    
+    {/* Bullet list description */}
     <div className="text-base mb-6">{session.description}</div>
     
     <div className="flex justify-between items-end">
@@ -2435,8 +2435,10 @@ const SessionCard = ({ session, onSelect, isSelected, isSoldOut }) => (
   </div>
 );
 
+// MERGED: ConfirmModal with sold out checks
 const ConfirmModal = ({ isOpen, onClose, formData, selectedSession, onPay, isSoldOut }) => {
   if (!isOpen) return null;
+  
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
       <div className="modal-card relative p-10 w-full max-w-xl mx-2 rounded-2xl bg-[#1b1b1f] text-white shadow-2xl">
@@ -2449,6 +2451,7 @@ const ConfirmModal = ({ isOpen, onClose, formData, selectedSession, onPay, isSol
         <h2 className="text-2xl font-extrabold mb-4 text-[#EB0028] text-center">Confirm Your Details & Ticket</h2>
         <p className="text-base text-gray-300 mb-7 text-center">Please verify your details before payment.</p>
         
+        {/* SOLD OUT warning */}
         {isSoldOut && (
           <div className="bg-red-900 border border-red-500 text-red-100 px-4 py-3 rounded mb-6 text-center">
             <strong>⚠️ This session is now sold out!</strong>
@@ -2482,8 +2485,10 @@ const ConfirmModal = ({ isOpen, onClose, formData, selectedSession, onPay, isSol
   );
 };
 
+// MERGED: Error Notification component
 const ErrorNotification = ({ message, onClose }) => {
   if (!message) return null;
+  
   return (
     <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 w-[90%] max-w-lg animate-bounce">
       <div className="bg-gradient-to-r from-[#EB0028] to-[#c20021] text-white font-bold text-lg px-6 py-4 rounded-2xl shadow-2xl flex justify-between items-center">
@@ -2508,148 +2513,33 @@ const TicketPage = () => {
   });
   const [showModal, setShowModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  
+  // MERGED: Availability state from yesterday's version
   const [availability, setAvailability] = useState(null);
   const [loadingAvailability, setLoadingAvailability] = useState(true);
-  const [isSDKReady, setIsSDKReady] = useState(false);
-  const [sdkLoadingAttempts, setSdkLoadingAttempts] = useState(0);
+  
+  // ref to details form for scrolling
   const detailsRef = useRef(null);
 
-  // ✅ ENHANCED: Advanced SDK Loading with Dynamic Fallback
+  // Load Razorpay SDK
   useEffect(() => {
-    const loadRazorpaySDK = () => {
-      return new Promise((resolve, reject) => {
-        // Check if already loaded
-        if (window.Razorpay) {
-          console.log("✅ Razorpay SDK already available");
-          try {
-            // Verify SDK functionality
-            const testRzp = new window.Razorpay({
-              key: "test_key",
-              amount: 100,
-              currency: "INR"
-            });
-            
-            if (testRzp && typeof testRzp.open === 'function') {
-              resolve(true);
-              return;
-            } else {
-              throw new Error("SDK not functional");
-            }
-          } catch (err) {
-            console.error("❌ SDK verification failed:", err);
-            reject(false);
-            return;
-          }
-        }
+    const existing = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+    if (existing) return;
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    document.body.appendChild(script);
+  }, []);
 
-        // Check if script tag exists
-        let existingScript = document.querySelector('script[src*="checkout.razorpay.com"]');
-        
-        if (!existingScript) {
-          // Create and load script dynamically
-          console.log("🔄 Loading Razorpay SDK dynamically...");
-          const script = document.createElement('script');
-          script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-          script.async = true;
-          script.onload = () => {
-            console.log("✅ Razorpay SDK loaded dynamically");
-            // Wait a bit for SDK to initialize
-            setTimeout(() => {
-              if (window.Razorpay) {
-                try {
-                  const testRzp = new window.Razorpay({
-                    key: "test_key",
-                    amount: 100,
-                    currency: "INR"
-                  });
-                  if (testRzp && typeof testRzp.open === 'function') {
-                    resolve(true);
-                  } else {
-                    reject(false);
-                  }
-                } catch (err) {
-                  reject(false);
-                }
-              } else {
-                reject(false);
-              }
-            }, 500);
-          };
-          script.onerror = () => {
-            console.error("❌ Failed to load Razorpay SDK dynamically");
-            reject(false);
-          };
-          document.head.appendChild(script);
-        } else {
-          // Script exists but may not be loaded yet
-          console.log("🔄 Waiting for existing Razorpay script to load...");
-          let checkAttempts = 0;
-          const checkSDK = setInterval(() => {
-            checkAttempts++;
-            if (window.Razorpay) {
-              try {
-                const testRzp = new window.Razorpay({
-                  key: "test_key",
-                  amount: 100,
-                  currency: "INR"
-                });
-                if (testRzp && typeof testRzp.open === 'function') {
-                  console.log("✅ Razorpay SDK loaded from existing script");
-                  clearInterval(checkSDK);
-                  resolve(true);
-                  return;
-                }
-              } catch (err) {
-                // Continue checking
-              }
-            }
-            
-            // Timeout after 50 attempts (5 seconds)
-            if (checkAttempts >= 50) {
-              clearInterval(checkSDK);
-              console.error("❌ Razorpay SDK loading timeout");
-              reject(false);
-            }
-          }, 100);
-        }
-      });
-    };
-
-    const initializeSDK = async () => {
-      try {
-        setSdkLoadingAttempts(prev => prev + 1);
-        console.log(`🔄 SDK loading attempt ${sdkLoadingAttempts + 1}`);
-        
-        await loadRazorpaySDK();
-        
-        console.log("✅ Razorpay SDK verified and functional");
-        setIsSDKReady(true);
-        setErrorMessage(""); // Clear any previous errors
-      } catch (error) {
-        console.error(`❌ Razorpay SDK initialization failed (attempt ${sdkLoadingAttempts + 1}):`, error);
-        
-        if (sdkLoadingAttempts < 2) {
-          // Retry up to 3 times
-          console.log("🔄 Retrying SDK initialization...");
-          setTimeout(initializeSDK, 2000);
-        } else {
-          setErrorMessage("Payment system failed to load. Please refresh the page or try a different browser.");
-          setIsSDKReady(false);
-        }
-      }
-    };
-
-    // Initialize on component mount
-    initializeSDK();
-  }, [sdkLoadingAttempts]);
-
-  // Fetch availability
+  // MERGED: Fetch availability on component mount and periodically
   useEffect(() => {
     fetchAvailability();
+    // Refresh availability every 30 seconds
     const interval = setInterval(fetchAvailability, 30000);
     return () => clearInterval(interval);
   }, []);
 
+  // MERGED: Function to fetch availability from backend
   const fetchAvailability = async () => {
     try {
       console.log("🔄 Fetching availability...");
@@ -2664,6 +2554,7 @@ const TicketPage = () => {
     } catch (error) {
       console.error("❌ Error fetching availability:", error);
       setLoadingAvailability(false);
+      // Set default availability to prevent errors
       setAvailability({
         morningAvailable: 0,
         eveningAvailable: 0,
@@ -2672,6 +2563,7 @@ const TicketPage = () => {
     }
   };
 
+  // MERGED: Function to check if a specific session is sold out
   const isSessionSoldOut = (sessionName) => {
     if (!availability) return false;
     
@@ -2692,17 +2584,12 @@ const TicketPage = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    if (!isSDKReady) {
-      setErrorMessage("❌ Payment system is not ready. Please refresh the page and try again.");
-      return;
-    }
-    
     if (!selectedSession) {
       setErrorMessage("⚠️ Please select a session (Morning / Full Day / Evening) before proceeding.");
       return;
     }
     
+    // MERGED: Check if selected session is sold out before showing modal
     if (isSessionSoldOut(selectedSession.name)) {
       setErrorMessage("🚫 This session is sold out! Please select a different session.");
       return;
@@ -2711,16 +2598,18 @@ const TicketPage = () => {
     setShowModal(true);
   };
 
-  // Clear error automatically
+  // Clear error automatically after 4 seconds
   useEffect(() => {
     if (errorMessage) {
-      const timer = setTimeout(() => setErrorMessage(""), 6000);
+      const timer = setTimeout(() => setErrorMessage(""), 4000);
       return () => clearTimeout(timer);
     }
   }, [errorMessage]);
 
+  // MERGED: Pre-check availability function
   const precheckAvailability = async () => {
     try {
+      // Refresh availability before payment
       await fetchAvailability();
       
       if (!selectedSession || !availability) return { ok: false, snapshot: null };
@@ -2747,14 +2636,12 @@ const TicketPage = () => {
     }
   };
 
-  // ✅ ULTRA-MINIMAL Razorpay options to prevent 400 error
+  // MERGED: Payment initiation with enhanced error handling
   const initiatePayment = async () => {
     try {
-      if (!selectedSession || !isSDKReady) {
-        setErrorMessage("Payment system not ready. Please wait or refresh the page.");
-        return;
-      }
-      
+      if (!selectedSession) return;
+
+      // Double-check that session isn't sold out
       if (isSessionSoldOut(selectedSession.name)) {
         setErrorMessage(`🚫 The ${selectedSession.name} is now sold out! Please select a different session.`);
         setShowModal(false);
@@ -2763,6 +2650,7 @@ const TicketPage = () => {
 
       console.log("🎫 Starting payment process for:", selectedSession.name);
 
+      // Pre-check availability
       const check = await precheckAvailability();
       if (!check.ok) {
         setErrorMessage("❌ Sorry, this session is sold out!");
@@ -2772,90 +2660,71 @@ const TicketPage = () => {
 
       // Create backend order
       const backendSessionKey = SESSION_KEY[selectedSession.name];
-      console.log("🔄 Creating order with session:", backendSessionKey);
-      
       const orderRes = await fetch(`${API_BASE_URL}/api/payment/create-order`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           amount: selectedSession.price,
-          session: backendSessionKey,
-          email: formData.email,
-          name: formData.name
+          session: backendSessionKey
         }),
       });
 
       if (!orderRes.ok) {
         const errorData = await orderRes.json().catch(() => ({}));
-        console.error("❌ Order creation failed:", errorData);
-        
         if (orderRes.status === 409 || errorData.error === "Seats are full") {
-          setErrorMessage(`🚫 Sorry! All seats for the ${selectedSession.name} are now sold out.`);
+          setErrorMessage(`🚫 Sorry! All seats for the ${selectedSession.name} are now sold out. Please try a different session.`);
           fetchAvailability();
-        } else if (orderRes.status === 401) {
-          setErrorMessage("❌ Payment gateway authentication failed. Please check your account activation status.");
         } else {
-          setErrorMessage(errorData.message || "Failed to create payment order. Please try again.");
+          setErrorMessage("Failed to create payment order.");
         }
         setShowModal(false);
         return;
       }
 
       const orderData = await orderRes.json();
-      console.log("✅ Order created:", orderData);
-
-      // Validate order response
       if (!orderData.id) {
-        console.error("❌ Invalid order response - missing order ID:", orderData);
-        setErrorMessage("Failed to create payment order. Please try again.");
+        setErrorMessage("Failed to create payment order. Try again later.");
         setShowModal(false);
         return;
       }
 
-      // ✅ CRITICAL FIX: Absolutely minimal Razorpay options
-      // This prevents the session_token parameter from being injected
-      const options = {
-        key: RAZORPAY_KEY_ID,           // Only the API key
-        amount: orderData.amount,       // Amount from order
-        currency: "INR",                // Currency
-        order_id: orderData.id,         // Order ID from backend
-        handler: function(response) {   // Success handler only
-          console.log("✅ Payment successful:", response);
-          verifyPayment(response);
-        }
-        // ❌ CRITICAL: NO OTHER PARAMETERS AT ALL
-        // No name, no description, no prefill, no theme, no modal, no error handler
-        // Any extra parameters cause session_token injection leading to 400 error
-      };
-
-      console.log("🚀 Ultra-minimal Razorpay options:", {
-        key: options.key.substring(0, 15) + "...",
-        amount: options.amount,
-        currency: options.currency,
-        order_id: options.order_id
-      });
-
-      // Final SDK verification before payment
       if (!window.Razorpay) {
-        throw new Error("Razorpay SDK not available");
+        setErrorMessage("Razorpay SDK not loaded.");
+        return;
       }
 
-      // Initialize and open Razorpay
-      const rzp = new window.Razorpay(options);
-      rzp.open();
-      setShowModal(false);
+      // Open Razorpay
+      const options = {
+        key: "rzp_live_RAdCru2UL8q5u1", //Vineet
+        amount: selectedSession.price * 100,
+        currency: "INR",
+        name: "TEDx DYP Akurdi",
+        description: `${selectedSession.name} Ticket`,
+        order_id: orderData.id,
+        handler: (response) => verifyPayment(response),
+        prefill: { name: formData.name, email: formData.email, contact: formData.phone },
+        theme: { color: "#EB0028" },
+        modal: {
+          ondismiss: function() {
+            console.log("Payment modal closed by user");
+            setShowModal(false);
+          }
+        }
+      };
 
+      new window.Razorpay(options).open();
+      setShowModal(false);
     } catch (err) {
-      console.error("❌ Payment initiation error:", err);
-      setErrorMessage("Payment initiation failed. Please check your internet connection and try again.");
+      console.error("Payment initiation error:", err);
+      setErrorMessage("Error initiating payment.");
       setShowModal(false);
     }
   };
 
-  // Payment verification
+  // MERGED: Payment verification
   const verifyPayment = async (response) => {
     try {
-      console.log("💳 Verifying payment...", response);
+      console.log("💳 Verifying payment...");
       const backendSessionKey = SESSION_KEY[selectedSession.name];
       
       const res = await fetch(`${API_BASE_URL}/api/payment/verify`, {
@@ -2876,32 +2745,20 @@ const TicketPage = () => {
       });
 
       const data = await res.json();
-      console.log("🔍 Verification response:", data);
-
       if (data.success) {
         console.log("✅ Payment verified successfully:", data.ticketId);
-        
-        const successParams = new URLSearchParams({
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          amount: selectedSession.price,
-          ticketId: data.ticketId,
-          razorpayPaymentId: response.razorpay_payment_id,
-          session: selectedSession.name
-        });
-        
-        window.location.href = `/success?${successParams.toString()}`;
+        window.location.href = `/success?name=${encodeURIComponent(formData.name)}&email=${encodeURIComponent(formData.email)}&phone=${encodeURIComponent(formData.phone)}&amount=${selectedSession.price}&ticketId=${data.ticketId}&razorpayPaymentId=${response.razorpay_payment_id}`;
       } else {
         console.error("❌ Payment verification failed:", data);
-        setErrorMessage(data.message || "Payment verification failed. Please contact support.");
+        setErrorMessage(data.message || "Payment verification failed.");
       }
     } catch (e) {
-      console.error("❌ Payment verification error:", e);
-      setErrorMessage("Error verifying payment. Please contact support if amount was debited.");
+      console.error("Payment verification error:", e);
+      setErrorMessage("Error verifying payment.");
     }
   };
 
+  // MERGED: Smooth scroll function
   const handleSessionSelect = (session) => {
     setSelectedSession(session);
     requestAnimationFrame(() => {
@@ -2915,11 +2772,13 @@ const TicketPage = () => {
     });
   };
 
+  // Get current sold out status for selected session
   const selectedSessionSoldOut = selectedSession ? isSessionSoldOut(selectedSession.name) : false;
 
   return (
     <div className="min-h-screen bg-black text-white font-sans relative overflow-x-hidden">
       
+      {/* MERGED: Error Message Component */}
       <ErrorNotification message={errorMessage} onClose={() => setErrorMessage("")} />
       
       <div className="relative z-10 py-16">
@@ -2938,32 +2797,6 @@ const TicketPage = () => {
             <InfoBox title="Venue" value="Shantai Auditorium DYP Akurdi Campus" />
             <InfoBox title="Time" value="09 am Onwards" />
           </div>
-
-          {/* ✅ ENHANCED: Better SDK Status Indicator */}
-          {!isSDKReady && (
-            <div className="text-center mb-8">
-              <div className="bg-yellow-900 border border-yellow-500 text-yellow-100 px-6 py-4 rounded-lg inline-block">
-                <p className="font-bold">⚠️ Payment System Loading...</p>
-                <p className="text-sm mt-1">
-                  Attempting to load payment system (Attempt {sdkLoadingAttempts + 1}/3)
-                </p>
-                <div className="mt-3 flex gap-2 justify-center">
-                  <button 
-                    onClick={() => window.location.reload()} 
-                    className="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded text-sm"
-                  >
-                    Refresh Page
-                  </button>
-                  <button 
-                    onClick={() => setSdkLoadingAttempts(0)} 
-                    className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm"
-                  >
-                    Retry Loading
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Pricing */}
           <div className="text-center mb-12">
@@ -3058,15 +2891,14 @@ const TicketPage = () => {
               <div className="flex justify-center pt-6">
                 <button
                   type="submit"
-                  disabled={!selectedSession || selectedSessionSoldOut || !isSDKReady}
+                  disabled={!selectedSession || selectedSessionSoldOut}
                   className={`px-16 py-4 text-2xl rounded-xl font-extrabold shadow-lg transition-all ${
-                    !selectedSession || selectedSessionSoldOut || !isSDKReady
+                    !selectedSession || selectedSessionSoldOut
                       ? 'bg-gray-500 text-gray-300 cursor-not-allowed'
                       : 'bg-gradient-to-r from-[#EB0028] to-[#c20021] hover:from-[#ff304a] hover:to-[#e0002a] text-white'
                   }`}
                 >
-                  {!isSDKReady ? "Loading Payment System..." : 
-                   selectedSessionSoldOut ? "Session Sold Out" : "Proceed to pay"}
+                  {selectedSessionSoldOut ? "Session Sold Out" : "Proceed to pay"}
                 </button>
               </div>
             </form>
@@ -3087,5 +2919,3 @@ const TicketPage = () => {
 };
 
 export default TicketPage;
-
-
