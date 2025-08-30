@@ -34,22 +34,20 @@
 <!-- </html> -->
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>TEDx DYP Akurdi - Event Registration</title>
-    
-    <!-- ✅ CORRECT: Load Razorpay SDK with error handling -->
-    <script 
-        src="https://checkout.razorpay.com/v1/checkout.js"
-        onload="console.log('✅ Razorpay SDK loaded successfully')"
-        onerror="console.error('❌ Failed to load Razorpay SDK')"
-        async>
-    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <!-- <link rel="stylesheet" href="./src/output.css"> -->
 </head>
 <body>
-    <div id="root"></div>
+    <div id="root">
+
+    </div>
     <script type="module" src="./src/main.js"></script>
+    <!-- Add inside <head> of public/index.html -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
 </body>
 </html>
