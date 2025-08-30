@@ -66,6 +66,7 @@
 // }
 
 
+
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
@@ -130,4 +131,3 @@ if (rootElement) {
 } else {
   console.error("Root element not found. Make sure your index.html has a div with id='root'");
 }
-
