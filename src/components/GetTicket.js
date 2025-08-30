@@ -2500,7 +2500,7 @@ const ErrorNotification = ({ message, onClose }) => {
 };
 
 // Backend base URL
-const API_BASE_URL = "https://backend-of-tedx-website-on-render.onrender.com";
+const API_BASE_URL = "https://backendoftedxdypakurdi.onrender.com";
 
 const TicketPage = () => {
   const [selectedSession, setSelectedSession] = useState(null);
@@ -2919,3 +2919,4 @@ const TicketPage = () => {
 };
 
 export default TicketPage;
+
