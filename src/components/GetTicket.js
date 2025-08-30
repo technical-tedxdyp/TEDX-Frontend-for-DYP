@@ -1074,7 +1074,6 @@
 // };
 
 // export default TicketPage;
-
 import React, { useEffect, useState, useRef } from "react";
 
 // Map UI labels to backend keys
@@ -1389,14 +1388,10 @@ const TicketPage = () => {
     }
   };
 
-  // ENHANCED: Payment initiation with comprehensive debugging
+  // ✅ FIXED: Simplified Razorpay options to prevent 400 error
   const initiatePayment = async () => {
     try {
-      if (!selectedSession) {
-        console.error("❌ No session selected");
-        return;
-      }
-
+      if (!selectedSession) return;
       if (isSessionSoldOut(selectedSession.name)) {
         setErrorMessage(`🚫 The ${selectedSession.name} is now sold out! Please select a different session.`);
         setShowModal(false);
@@ -1404,7 +1399,6 @@ const TicketPage = () => {
       }
 
       console.log("🎫 Starting payment process for:", selectedSession.name);
-      console.log("💰 Session price:", selectedSession.price);
 
       const check = await precheckAvailability();
       if (!check.ok) {
@@ -1413,9 +1407,7 @@ const TicketPage = () => {
         return;
       }
 
-      console.log("✅ Availability check passed");
-
-      // Create backend order with ALL required fields
+      // Create backend order
       const backendSessionKey = SESSION_KEY[selectedSession.name];
       const orderPayload = { 
         amount: selectedSession.price,
@@ -1435,127 +1427,90 @@ const TicketPage = () => {
       if (!orderRes.ok) {
         const errorData = await orderRes.json().catch(() => ({}));
         console.error("❌ Order creation failed:", orderRes.status, errorData);
-        
-        if (orderRes.status === 409 || errorData.error === "Seats are full") {
-          setErrorMessage(`🚫 Sorry! All seats for the ${selectedSession.name} are now sold out.`);
-          fetchAvailability();
-        } else if (orderRes.status === 401) {
-          setErrorMessage("❌ Payment gateway authentication failed. Please try again later.");
-        } else {
-          setErrorMessage(errorData.message || `Failed to create payment order (Status: ${orderRes.status}).`);
-        }
+        setErrorMessage(errorData.message || "Failed to create payment order.");
         setShowModal(false);
         return;
       }
 
       const orderData = await orderRes.json();
-      console.log("✅ Raw order response:", JSON.stringify(orderData, null, 2));
+      console.log("✅ Order created:", orderData);
 
-      // CRITICAL: Validate order response structure
+      // Validate order response
       if (!orderData.id) {
-        console.error("❌ Invalid order response - missing 'id' field:", orderData);
-        console.error("❌ Available fields:", Object.keys(orderData));
-        setErrorMessage("Invalid order response from backend. Please try again.");
+        console.error("❌ Missing order ID");
+        setErrorMessage("Invalid order response. Please try again.");
         setShowModal(false);
         return;
       }
 
-      // Verify Razorpay SDK is loaded
       if (!window.Razorpay) {
-        console.error("❌ Razorpay SDK not loaded");
         setErrorMessage("❌ Payment system not loaded. Please refresh and try again.");
         return;
       }
 
-      // CRITICAL: Build Razorpay options using EXACT backend response values
+      // ✅ CORRECTED: Simplified Razorpay options (ONLY essential parameters)
       const options = {
-        key: RAZORPAY_KEY_ID,                    // Live key
-        amount: orderData.amount,                // Use backend amount (in paise)
-        currency: orderData.currency || "INR",  // Use backend currency
-        name: "TEDx DYP Akurdi",
+        key: RAZORPAY_KEY_ID,
+        amount: orderData.amount,
+        currency: orderData.currency || "INR",
+        name: "TEDx DYP Akurdi", 
         description: `${selectedSession.name} Ticket`,
-        order_id: orderData.id,                  // CRITICAL: Use exact order ID from backend
-        handler: (response) => {
+        order_id: orderData.id,
+        handler: function(response) {
           console.log("✅ Payment successful:", response);
           verifyPayment(response);
         },
-        prefill: { 
-          name: formData.name, 
-          email: formData.email, 
-          contact: formData.phone 
+        prefill: {
+          name: formData.name,
+          email: formData.email,
+          contact: formData.phone
         },
-        theme: { color: "#EB0028" },
-        modal: {
-          ondismiss: function() {
-            console.log("🚪 Payment modal closed by user");
-            setShowModal(false);
-          }
+        theme: {
+          color: "#EB0028"
         }
+        // ❌ REMOVED: All extra parameters like modal, error handler, etc.
       };
 
-      // ENHANCED: Comprehensive logging before payment
-      console.log("🚀 Razorpay options prepared:");
-      console.log("  - Key:", options.key.substring(0, 12) + "...");
-      console.log("  - Amount (paise):", options.amount);
-      console.log("  - Currency:", options.currency);
-      console.log("  - Order ID:", options.order_id);
-      console.log("  - Description:", options.description);
-
-      // Final validation
-      if (!options.order_id || options.order_id.length < 10) {
-        console.error("❌ Invalid order_id:", options.order_id);
-        setErrorMessage("Invalid order ID received. Please try again.");
-        setShowModal(false);
-        return;
-      }
-
-      // Initialize Razorpay
-      console.log("💳 Initializing Razorpay checkout...");
-      const rzp = new window.Razorpay(options);
-      
-      // Add error handling for Razorpay instance
-      rzp.on('payment.failed', function (response) {
-        console.error("❌ Razorpay payment failed:", response);
-        setErrorMessage(`Payment failed: ${response.error?.description || "Unknown error"}`);
-        setShowModal(false);
+      console.log("🚀 Razorpay options:", {
+        key: options.key.substring(0, 12) + "...",
+        amount: options.amount,
+        currency: options.currency,
+        order_id: options.order_id
       });
 
+      // Initialize Razorpay with simplified options
+      const rzp = new window.Razorpay(options);
       rzp.open();
       setShowModal(false);
 
     } catch (err) {
       console.error("❌ Payment initiation error:", err);
-      console.error("❌ Error stack:", err.stack);
-      setErrorMessage(`Error initiating payment: ${err.message}`);
+      setErrorMessage("Error initiating payment. Please try again.");
       setShowModal(false);
     }
   };
 
-  // Payment verification with enhanced logging
+  // Payment verification
   const verifyPayment = async (response) => {
     try {
-      console.log("💳 Verifying payment with response:", response);
+      console.log("💳 Verifying payment...", response);
       const backendSessionKey = SESSION_KEY[selectedSession.name];
-      
-      const verifyPayload = {
-        razorpay_order_id: response.razorpay_order_id,
-        razorpay_payment_id: response.razorpay_payment_id,
-        razorpay_signature: response.razorpay_signature,
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        department: formData.department,
-        branch: formData.branch,
-        session: backendSessionKey,
-        amount: selectedSession.price,
-      };
-
-      console.log("🔐 Sending verification payload:", verifyPayload);
       
       const res = await fetch(`${API_BASE_URL}/api/payment/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(verifyPayload),
+        body: JSON.stringify({
+          razorpay_order_id: response.razorpay_order_id,
+          razorpay_payment_id: response.razorpay_payment_id,
+          razorpay_signature: response.razorpay_signature,
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          department: formData.department,
+          branch: formData.branch,
+          session: backendSessionKey,
+          amount: selectedSession.price,
+        }),
       });
 
       const data = await res.json();
