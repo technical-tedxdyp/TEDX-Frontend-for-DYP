@@ -2930,7 +2930,6 @@
 // };
 
 // export default TicketPage;
-
 import React, { useEffect, useState, useRef } from "react";
 
 // Map UI labels to backend keys
@@ -2985,9 +2984,9 @@ const SESSIONS = [
   },
 ];
 
-// ✅ FIXED: Corrected API key and added test mode fallback
-const RAZORPAY_KEY_ID = "rzp_live_RAdCru2UL8q5u1"; // Fixed typo
-// const RAZORPAY_KEY_ID = "rzp_test_YOUR_TEST_KEY"; // Uncomment for testing
+// ✅ FIXED: Corrected API key with test mode fallback
+const RAZORPAY_KEY_ID = "rzp_live_RAdCru2UL8q5u1";
+// const RAZORPAY_KEY_ID = "rzp_test_YOUR_TEST_KEY"; // Uncomment for testing account issues
 
 const InfoBox = ({ title, value }) => (
   <div className="header-box flex flex-col w-full min-w-[240px] max-w-[340px] border-2 border-[#EB0028] overflow-hidden mx-3 mb-3 rounded-2xl shadow-lg">
@@ -3127,46 +3126,137 @@ const TicketPage = () => {
   const [availability, setAvailability] = useState(null);
   const [loadingAvailability, setLoadingAvailability] = useState(true);
   const [isSDKReady, setIsSDKReady] = useState(false);
+  const [sdkLoadingAttempts, setSdkLoadingAttempts] = useState(0);
   const detailsRef = useRef(null);
 
-  // ✅ ENHANCED: Better Razorpay SDK verification
+  // ✅ ENHANCED: Advanced SDK Loading with Dynamic Fallback
   useEffect(() => {
-    const checkSDK = () => {
-      if (!window.Razorpay) {
-        console.error("❌ Razorpay SDK not loaded");
-        setErrorMessage("Payment system not loaded. Please refresh the page and ensure you have internet connection.");
-        setIsSDKReady(false);
-        return;
-      }
-      
-      // Verify SDK is actually functional
-      try {
-        // Test SDK instantiation without opening
-        const testRzp = new window.Razorpay({
-          key: "test_key",
-          amount: 100,
-          currency: "INR"
-        });
-        
-        if (testRzp && typeof testRzp.open === 'function') {
-          console.log("✅ Razorpay SDK is available and functional");
-          setIsSDKReady(true);
-        } else {
-          throw new Error("SDK not functional");
+    const loadRazorpaySDK = () => {
+      return new Promise((resolve, reject) => {
+        // Check if already loaded
+        if (window.Razorpay) {
+          console.log("✅ Razorpay SDK already available");
+          try {
+            // Verify SDK functionality
+            const testRzp = new window.Razorpay({
+              key: "test_key",
+              amount: 100,
+              currency: "INR"
+            });
+            
+            if (testRzp && typeof testRzp.open === 'function') {
+              resolve(true);
+              return;
+            } else {
+              throw new Error("SDK not functional");
+            }
+          } catch (err) {
+            console.error("❌ SDK verification failed:", err);
+            reject(false);
+            return;
+          }
         }
-      } catch (err) {
-        console.error("❌ Razorpay SDK verification failed:", err);
-        setErrorMessage("Payment system verification failed. Please refresh the page.");
-        setIsSDKReady(false);
+
+        // Check if script tag exists
+        let existingScript = document.querySelector('script[src*="checkout.razorpay.com"]');
+        
+        if (!existingScript) {
+          // Create and load script dynamically
+          console.log("🔄 Loading Razorpay SDK dynamically...");
+          const script = document.createElement('script');
+          script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+          script.async = true;
+          script.onload = () => {
+            console.log("✅ Razorpay SDK loaded dynamically");
+            // Wait a bit for SDK to initialize
+            setTimeout(() => {
+              if (window.Razorpay) {
+                try {
+                  const testRzp = new window.Razorpay({
+                    key: "test_key",
+                    amount: 100,
+                    currency: "INR"
+                  });
+                  if (testRzp && typeof testRzp.open === 'function') {
+                    resolve(true);
+                  } else {
+                    reject(false);
+                  }
+                } catch (err) {
+                  reject(false);
+                }
+              } else {
+                reject(false);
+              }
+            }, 500);
+          };
+          script.onerror = () => {
+            console.error("❌ Failed to load Razorpay SDK dynamically");
+            reject(false);
+          };
+          document.head.appendChild(script);
+        } else {
+          // Script exists but may not be loaded yet
+          console.log("🔄 Waiting for existing Razorpay script to load...");
+          let checkAttempts = 0;
+          const checkSDK = setInterval(() => {
+            checkAttempts++;
+            if (window.Razorpay) {
+              try {
+                const testRzp = new window.Razorpay({
+                  key: "test_key",
+                  amount: 100,
+                  currency: "INR"
+                });
+                if (testRzp && typeof testRzp.open === 'function') {
+                  console.log("✅ Razorpay SDK loaded from existing script");
+                  clearInterval(checkSDK);
+                  resolve(true);
+                  return;
+                }
+              } catch (err) {
+                // Continue checking
+              }
+            }
+            
+            // Timeout after 50 attempts (5 seconds)
+            if (checkAttempts >= 50) {
+              clearInterval(checkSDK);
+              console.error("❌ Razorpay SDK loading timeout");
+              reject(false);
+            }
+          }, 100);
+        }
+      });
+    };
+
+    const initializeSDK = async () => {
+      try {
+        setSdkLoadingAttempts(prev => prev + 1);
+        console.log(`🔄 SDK loading attempt ${sdkLoadingAttempts + 1}`);
+        
+        await loadRazorpaySDK();
+        
+        console.log("✅ Razorpay SDK verified and functional");
+        setIsSDKReady(true);
+        setErrorMessage(""); // Clear any previous errors
+      } catch (error) {
+        console.error(`❌ Razorpay SDK initialization failed (attempt ${sdkLoadingAttempts + 1}):`, error);
+        
+        if (sdkLoadingAttempts < 2) {
+          // Retry up to 3 times
+          console.log("🔄 Retrying SDK initialization...");
+          setTimeout(initializeSDK, 2000);
+        } else {
+          setErrorMessage("Payment system failed to load. Please refresh the page or try a different browser.");
+          setIsSDKReady(false);
+        }
       }
     };
 
-    // Check immediately and also after a short delay
-    checkSDK();
-    const timer = setTimeout(checkSDK, 1000);
-    
-    return () => clearTimeout(timer);
-  }, []);
+    // Initialize on component mount
+    initializeSDK();
+  }, [sdkLoadingAttempts]);
 
   // Fetch availability
   useEffect(() => {
@@ -3239,7 +3329,7 @@ const TicketPage = () => {
   // Clear error automatically
   useEffect(() => {
     if (errorMessage) {
-      const timer = setTimeout(() => setErrorMessage(""), 5000);
+      const timer = setTimeout(() => setErrorMessage(""), 6000);
       return () => clearTimeout(timer);
     }
   }, [errorMessage]);
@@ -3272,10 +3362,13 @@ const TicketPage = () => {
     }
   };
 
-  // ✅ COMPLETELY FIXED: Ultra-minimal Razorpay options to prevent session_token injection
+  // ✅ ULTRA-MINIMAL Razorpay options to prevent 400 error
   const initiatePayment = async () => {
     try {
-      if (!selectedSession || !isSDKReady) return;
+      if (!selectedSession || !isSDKReady) {
+        setErrorMessage("Payment system not ready. Please wait or refresh the page.");
+        return;
+      }
       
       if (isSessionSoldOut(selectedSession.name)) {
         setErrorMessage(`🚫 The ${selectedSession.name} is now sold out! Please select a different session.`);
@@ -3317,7 +3410,7 @@ const TicketPage = () => {
         } else if (orderRes.status === 401) {
           setErrorMessage("❌ Payment gateway authentication failed. Please check your account activation status.");
         } else {
-          setErrorMessage(errorData.message || "Failed to create payment order. Please try again or contact support.");
+          setErrorMessage(errorData.message || "Failed to create payment order. Please try again.");
         }
         setShowModal(false);
         return;
@@ -3341,13 +3434,13 @@ const TicketPage = () => {
         amount: orderData.amount,       // Amount from order
         currency: "INR",                // Currency
         order_id: orderData.id,         // Order ID from backend
-        handler: function(response) {   // Success handler
+        handler: function(response) {   // Success handler only
           console.log("✅ Payment successful:", response);
           verifyPayment(response);
         }
-        // ❌ CRITICAL: NO OTHER PARAMETERS
+        // ❌ CRITICAL: NO OTHER PARAMETERS AT ALL
         // No name, no description, no prefill, no theme, no modal, no error handler
-        // These extra parameters cause the session_token to be injected
+        // Any extra parameters cause session_token injection leading to 400 error
       };
 
       console.log("🚀 Ultra-minimal Razorpay options:", {
@@ -3357,16 +3450,15 @@ const TicketPage = () => {
         order_id: options.order_id
       });
 
-      // Initialize and open Razorpay
-      try {
-        const rzp = new window.Razorpay(options);
-        rzp.open();
-        setShowModal(false);
-      } catch (razorpayError) {
-        console.error("❌ Razorpay initialization error:", razorpayError);
-        setErrorMessage("Payment gateway error. Please try again or contact support if the issue persists.");
-        setShowModal(false);
+      // Final SDK verification before payment
+      if (!window.Razorpay) {
+        throw new Error("Razorpay SDK not available");
       }
+
+      // Initialize and open Razorpay
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+      setShowModal(false);
 
     } catch (err) {
       console.error("❌ Payment initiation error:", err);
@@ -3417,11 +3509,11 @@ const TicketPage = () => {
         window.location.href = `/success?${successParams.toString()}`;
       } else {
         console.error("❌ Payment verification failed:", data);
-        setErrorMessage(data.message || "Payment verification failed. Please contact support with your payment details.");
+        setErrorMessage(data.message || "Payment verification failed. Please contact support.");
       }
     } catch (e) {
       console.error("❌ Payment verification error:", e);
-      setErrorMessage("Error verifying payment. Please contact support if amount was debited. Include your payment reference.");
+      setErrorMessage("Error verifying payment. Please contact support if amount was debited.");
     }
   };
 
@@ -3462,11 +3554,28 @@ const TicketPage = () => {
             <InfoBox title="Time" value="09 am Onwards" />
           </div>
 
-          {/* SDK Status Indicator */}
+          {/* ✅ ENHANCED: Better SDK Status Indicator */}
           {!isSDKReady && (
             <div className="text-center mb-8">
-              <div className="bg-yellow-900 border border-yellow-500 text-yellow-100 px-4 py-3 rounded-lg inline-block">
-                ⚠️ Payment system loading... Please wait or refresh if it takes too long.
+              <div className="bg-yellow-900 border border-yellow-500 text-yellow-100 px-6 py-4 rounded-lg inline-block">
+                <p className="font-bold">⚠️ Payment System Loading...</p>
+                <p className="text-sm mt-1">
+                  Attempting to load payment system (Attempt {sdkLoadingAttempts + 1}/3)
+                </p>
+                <div className="mt-3 flex gap-2 justify-center">
+                  <button 
+                    onClick={() => window.location.reload()} 
+                    className="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded text-sm"
+                  >
+                    Refresh Page
+                  </button>
+                  <button 
+                    onClick={() => setSdkLoadingAttempts(0)} 
+                    className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm"
+                  >
+                    Retry Loading
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -3593,6 +3702,3 @@ const TicketPage = () => {
 };
 
 export default TicketPage;
-
-
-
