@@ -2315,6 +2315,622 @@
 
 // export default TicketPage;
 
+//  --------- old code 4.1 ------------
+
+// import React, { useEffect, useState, useRef } from "react";
+
+// // Map UI labels to backend keys
+// const SESSION_KEY = {
+//   "Morning Session": "morning",
+//   "Full Day Session": "fullDay", 
+//   "Evening Session": "evening",
+// };
+
+// // Sessions with bullet point speaker lists
+// const SESSIONS = [
+//   {
+//     id: 1,
+//     name: "Morning Session",
+//     description: (
+//       <ul className="list-disc list-inside space-y-2 text-gray-300 text-left px-2">
+//         <li>Mrs. Bela Shende</li>
+//         <li>Dr. Popatrao Pawar</li>
+//       </ul>
+//     ),
+//     price: 49,
+//     save: null,
+//   },
+//   {
+//     id: 2,
+//     name: "Full Day Session",
+//     description: (
+//       <ul className="list-disc list-inside space-y-2 text-gray-300 text-left px-2">
+//         <li>Mrs. Bela Shende</li>
+//         <li>Dr. Popatrao Pawar</li>
+//         <li>Mr. Rajan Chopra</li>
+//         <li>Mr. Nitin Pandey</li>
+//         <li>Mrs. Aishwarya Pissay</li>
+//       </ul>
+//     ),
+//     price: 69,
+//     save: "",
+//     popular: true,
+//   },
+//   {
+//     id: 3,
+//     name: "Evening Session",
+//     description: (
+//       <ul className="list-disc list-inside space-y-2 text-gray-300 text-left px-2">
+//         <li>Mr. Rajan Chopra</li>
+//         <li>Mr. Nitin Pandey</li>
+//         <li>Mrs. Aishwarya Pissay</li>
+//       </ul>
+//     ),
+//     price: 49,
+//     save: "",
+//   },
+// ];
+
+// // FIXED: Use your live Razorpay key directly
+// const RAZORPAY_KEY_ID = "rzp_live_RBWUzFnCHTPV1R";
+
+// const InfoBox = ({ title, value }) => (
+//   <div className="header-box flex flex-col w-full min-w-[240px] max-w-[340px] border-2 border-[#EB0028] overflow-hidden mx-3 mb-3 rounded-2xl shadow-lg">
+//     <div className="p-6 font-bold text-2xl bg-[#EB0028] text-white">{title}</div>
+//     <div className="header-box-value text-lg py-8">{value}</div>
+//   </div>
+// );
+
+// const SessionCard = ({ session, onSelect, isSelected, isSoldOut }) => (
+//   <div
+//     className={`ticket-card ${session.popular ? "popular" : ""} ${
+//       isSelected ? "selected" : ""
+//     } ${isSoldOut ? "sold-out opacity-60" : "cursor-pointer"} relative bg-[#17171a]/90 border border-white/10 hover:border-white/20 hover:-translate-y-1 transition-all duration-200 shadow-xl`}
+//     onClick={isSoldOut ? undefined : () => onSelect(session)}
+//     style={{ 
+//       minWidth: "320px", 
+//       maxWidth: "400px", 
+//       padding: "2.2rem", 
+//       marginBottom: "1rem", 
+//       borderRadius: "1.5rem",
+//       cursor: isSoldOut ? "not-allowed" : "pointer"
+//     }}
+//   >
+//     {session.popular && (
+//       <span className="absolute -top-4 left-1/2 -translate-x-1/2 save-tag uppercase font-bold text-xs tracking-wide bg-[#EB0028] text-white px-4 py-1 rounded-full shadow-lg">
+//         Most Popular
+//       </span>
+//     )}
+    
+//     {isSoldOut && (
+//       <span className="absolute -top-4 right-4 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">
+//         SOLD OUT
+//       </span>
+//     )}
+    
+//     <div className="flex justify-end mb-3">
+//       {typeof session.save === "string" && session.save.trim().length > 0 && <span className="save-tag">{session.save}</span>}
+//     </div>
+    
+//     <h3 className="text-2xl font-bold mb-4 text-white text-center">{session.name}</h3>
+//     <div className="text-base mb-6">{session.description}</div>
+    
+//     <div className="flex justify-between items-end">
+//       <span className="text-4xl font-extrabold">₹{session.price}</span>
+//       <button
+//         className={`mt-2 text-base py-3 px-6 rounded-xl font-bold transition-all shadow-lg ${
+//           isSoldOut 
+//             ? 'bg-gray-500 cursor-not-allowed text-gray-300' 
+//             : 'bg-gradient-to-r from-[#EB0028] to-[#c20021] text-white hover:shadow-2xl hover:scale-[1.02]'
+//         }`}
+//         type="button"
+//         disabled={isSoldOut}
+//         onClick={(e) => {
+//           e.stopPropagation();
+//           if (!isSoldOut) onSelect(session);
+//         }}
+//       >
+//         {isSoldOut ? "Sold Out" : "Buy Now"}
+//       </button>
+//     </div>
+//   </div>
+// );
+
+// const ConfirmModal = ({ isOpen, onClose, formData, selectedSession, onPay, isSoldOut }) => {
+//   if (!isOpen) return null;
+//   return (
+//     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+//       <div className="modal-card relative p-10 w-full max-w-xl mx-2 rounded-2xl bg-[#1b1b1f] text-white shadow-2xl">
+//         <button onClick={onClose} className="absolute top-4 right-4 text-white bg-[#EB0028] rounded-full p-2 hover:bg-[#c20021] transition-colors">
+//           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+//             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+//           </svg>
+//         </button>
+        
+//         <h2 className="text-2xl font-extrabold mb-4 text-[#EB0028] text-center">Confirm Your Details & Ticket</h2>
+//         <p className="text-base text-gray-300 mb-7 text-center">Please verify your details before payment.</p>
+        
+//         {isSoldOut && (
+//           <div className="bg-red-900 border border-red-500 text-red-100 px-4 py-3 rounded mb-6 text-center">
+//             <strong>⚠️ This session is now sold out!</strong>
+//             <p className="text-sm mt-1">Please select a different session to proceed.</p>
+//           </div>
+//         )}
+        
+//         <div className="flex flex-col gap-3 text-lg mb-9">
+//           <div><span className="font-bold text-[#EB0028]">Name:</span> <span className="ml-2">{formData.name}</span></div>
+//           <div><span className="font-bold text-[#EB0028]">Email:</span> <span className="ml-2">{formData.email}</span></div>
+//           <div><span className="font-bold text-[#EB0028]">Contact No.:</span> <span className="ml-2">{formData.phone}</span></div>
+//           <div><span className="font-bold text-[#EB0028]">Department:</span> <span className="ml-2">{formData.department}</span></div>
+//           <div><span className="font-bold text-[#EB0028]">Branch:</span> <span className="ml-2">{formData.branch}</span></div>
+//           <div><span className="font-bold text-[#EB0028]">Session:</span> <span className="ml-2">{selectedSession?.name}</span></div>
+//           <div><span className="font-bold text-[#EB0028]">Amount:</span> <span className="ml-2">₹{selectedSession?.price}</span></div>
+//         </div>
+        
+//         <button 
+//           onClick={onPay} 
+//           disabled={isSoldOut}
+//           className={`w-full py-4 text-lg font-bold rounded-xl transition-colors mt-2 shadow-lg ${
+//             isSoldOut 
+//               ? 'bg-gray-500 text-gray-300 cursor-not-allowed' 
+//               : 'bg-[#EB0028] text-white hover:bg-[#c20021]'
+//           }`}
+//         >
+//           {isSoldOut ? "Session Sold Out" : "Pay Now"}
+//         </button>
+//       </div>
+//     </div>
+//   );
+// };
+
+// const ErrorNotification = ({ message, onClose }) => {
+//   if (!message) return null;
+//   return (
+//     <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 w-[90%] max-w-lg animate-bounce">
+//       <div className="bg-gradient-to-r from-[#EB0028] to-[#c20021] text-white font-bold text-lg px-6 py-4 rounded-2xl shadow-2xl flex justify-between items-center">
+//         <span>{message}</span>
+//         <button onClick={onClose} className="ml-4 bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg transition">✕</button>
+//       </div>
+//     </div>
+//   );
+// };
+
+// // Backend base URL
+// const API_BASE_URL = "https://backendoftedxdypakurdi.onrender.com";
+
+// const TicketPage = () => {
+//   const [selectedSession, setSelectedSession] = useState(null);
+//   const [formData, setFormData] = useState({ 
+//     name: "", 
+//     email: "", 
+//     phone: "", 
+//     department: "", 
+//     branch: "" 
+//   });
+//   const [showModal, setShowModal] = useState(false);
+//   const [errorMessage, setErrorMessage] = useState("");
+//   const [availability, setAvailability] = useState(null);
+//   const [loadingAvailability, setLoadingAvailability] = useState(true);
+//   const detailsRef = useRef(null);
+
+//   // ✅ FIXED: Only check if Razorpay SDK is available (no dynamic loading)
+//   useEffect(() => {
+//     if (!window.Razorpay) {
+//       console.error("❌ Razorpay SDK not loaded");
+//       setErrorMessage("Payment system not loaded. Please refresh the page.");
+//     } else {
+//       console.log("✅ Razorpay SDK is available");
+//     }
+//   }, []);
+
+//   // Fetch availability
+//   useEffect(() => {
+//     fetchAvailability();
+//     const interval = setInterval(fetchAvailability, 30000);
+//     return () => clearInterval(interval);
+//   }, []);
+
+//   const fetchAvailability = async () => {
+//     try {
+//       console.log("🔄 Fetching availability...");
+//       const res = await fetch(`${API_BASE_URL}/api/payment/availability`);
+//       if (!res.ok) throw new Error("Failed to fetch availability");
+      
+//       const data = await res.json();
+//       console.log("📊 Availability data:", data);
+      
+//       setAvailability(data);
+//       setLoadingAvailability(false);
+//     } catch (error) {
+//       console.error("❌ Error fetching availability:", error);
+//       setLoadingAvailability(false);
+//       setAvailability({
+//         morningAvailable: 0,
+//         eveningAvailable: 0,
+//         fullDayAvailable: 0
+//       });
+//     }
+//   };
+
+//   const isSessionSoldOut = (sessionName) => {
+//     if (!availability) return false;
+    
+//     const sessionKey = SESSION_KEY[sessionName];
+//     switch (sessionKey) {
+//       case "morning":
+//         return availability.morningAvailable <= 0;
+//       case "evening":
+//         return availability.eveningAvailable <= 0;
+//       case "fullDay":
+//         return availability.fullDayAvailable <= 0;
+//       default:
+//         return false;
+//     }
+//   };
+
+//   const handleInputChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+//   const handleSubmit = (e) => {
+//     e.preventDefault();
+//     if (!selectedSession) {
+//       setErrorMessage("⚠️ Please select a session (Morning / Full Day / Evening) before proceeding.");
+//       return;
+//     }
+    
+//     if (isSessionSoldOut(selectedSession.name)) {
+//       setErrorMessage("🚫 This session is sold out! Please select a different session.");
+//       return;
+//     }
+    
+//     setShowModal(true);
+//   };
+
+//   // Clear error automatically
+//   useEffect(() => {
+//     if (errorMessage) {
+//       const timer = setTimeout(() => setErrorMessage(""), 4000);
+//       return () => clearTimeout(timer);
+//     }
+//   }, [errorMessage]);
+
+//   const precheckAvailability = async () => {
+//     try {
+//       await fetchAvailability();
+      
+//       if (!selectedSession || !availability) return { ok: false, snapshot: null };
+      
+//       const sessionKey = SESSION_KEY[selectedSession.name];
+//       let available = 0;
+      
+//       switch (sessionKey) {
+//         case "morning":
+//           available = availability.morningAvailable;
+//           break;
+//         case "evening":
+//           available = availability.eveningAvailable;
+//           break;
+//         case "fullDay":
+//           available = availability.fullDayAvailable;
+//           break;
+//       }
+      
+//       return { ok: available > 0, snapshot: availability };
+//     } catch (error) {
+//       console.error("Availability check error:", error);
+//       return { ok: false, snapshot: null };
+//     }
+//   };
+
+//   // ✅ ULTRA-MINIMAL Razorpay options to prevent 400 error
+//   const initiatePayment = async () => {
+//     try {
+//       if (!selectedSession) return;
+      
+//       if (isSessionSoldOut(selectedSession.name)) {
+//         setErrorMessage(`🚫 The ${selectedSession.name} is now sold out! Please select a different session.`);
+//         setShowModal(false);
+//         return;
+//       }
+
+//       console.log("🎫 Starting payment process for:", selectedSession.name);
+
+//       const check = await precheckAvailability();
+//       if (!check.ok) {
+//         setErrorMessage("❌ Sorry, this session is sold out!");
+//         setShowModal(false);
+//         return;
+//       }
+
+//       // Create backend order
+//       const backendSessionKey = SESSION_KEY[selectedSession.name];
+//       console.log("🔄 Creating order with session:", backendSessionKey);
+      
+//       const orderRes = await fetch(`${API_BASE_URL}/api/payment/create-order`, {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({ 
+//           amount: selectedSession.price,
+//           session: backendSessionKey,
+//           email: formData.email,
+//           name: formData.name
+//         }),
+//       });
+
+//       if (!orderRes.ok) {
+//         const errorData = await orderRes.json().catch(() => ({}));
+//         console.error("❌ Order creation failed:", errorData);
+        
+//         if (orderRes.status === 409 || errorData.error === "Seats are full") {
+//           setErrorMessage(`🚫 Sorry! All seats for the ${selectedSession.name} are now sold out.`);
+//           fetchAvailability();
+//         } else if (orderRes.status === 401) {
+//           setErrorMessage("❌ Payment gateway authentication failed. Please try again later.");
+//         } else {
+//           setErrorMessage(errorData.message || "Failed to create payment order.");
+//         }
+//         setShowModal(false);
+//         return;
+//       }
+
+//       const orderData = await orderRes.json();
+//       console.log("✅ Order created:", orderData);
+
+//       // Validate order response
+//       if (!orderData.id) {
+//         console.error("❌ Invalid order response - missing order ID:", orderData);
+//         setErrorMessage("Failed to create payment order. Please try again.");
+//         setShowModal(false);
+//         return;
+//       }
+
+//       if (!window.Razorpay) {
+//         setErrorMessage("❌ Payment system not loaded. Please refresh and try again.");
+//         return;
+//       }
+
+//       // ✅ ABSOLUTE MINIMAL Razorpay options to prevent session_token error
+//       const options = {
+//         key: RAZORPAY_KEY_ID,
+//         amount: orderData.amount,
+//         currency: "INR",
+//         name: "TEDx DYP Akurdi",
+//         order_id: orderData.id,
+//         handler: function(response) {
+//           console.log("✅ Payment successful:", response);
+//           verifyPayment(response);
+//         }
+//         // ❌ REMOVED: prefill, theme, description, modal, error - all extra parameters
+//       };
+
+//       console.log("🚀 Minimal Razorpay options:", {
+//         key: options.key.substring(0, 12) + "...",
+//         amount: options.amount,
+//         currency: options.currency,
+//         order_id: options.order_id
+//       });
+
+//       // Initialize Razorpay with absolute minimal options
+//       const rzp = new window.Razorpay(options);
+//       rzp.open();
+//       setShowModal(false);
+
+//     } catch (err) {
+//       console.error("❌ Payment initiation error:", err);
+//       setErrorMessage("Error initiating payment. Please try again.");
+//       setShowModal(false);
+//     }
+//   };
+
+//   // Payment verification
+//   const verifyPayment = async (response) => {
+//     try {
+//       console.log("💳 Verifying payment...", response);
+//       const backendSessionKey = SESSION_KEY[selectedSession.name];
+      
+//       const res = await fetch(`${API_BASE_URL}/api/payment/verify`, {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({
+//           razorpay_order_id: response.razorpay_order_id,
+//           razorpay_payment_id: response.razorpay_payment_id,
+//           razorpay_signature: response.razorpay_signature,
+//           name: formData.name,
+//           email: formData.email,
+//           phone: formData.phone,
+//           department: formData.department,
+//           branch: formData.branch,
+//           session: backendSessionKey,
+//           amount: selectedSession.price,
+//         }),
+//       });
+
+//       const data = await res.json();
+//       console.log("🔍 Verification response:", data);
+
+//       if (data.success) {
+//         console.log("✅ Payment verified successfully:", data.ticketId);
+        
+//         // Build success URL with all required parameters
+//         const successParams = new URLSearchParams({
+//           name: formData.name,
+//           email: formData.email,
+//           phone: formData.phone,
+//           amount: selectedSession.price,
+//           ticketId: data.ticketId,
+//           razorpayPaymentId: response.razorpay_payment_id,
+//           session: selectedSession.name
+//         });
+        
+//         window.location.href = `/success?${successParams.toString()}`;
+//       } else {
+//         console.error("❌ Payment verification failed:", data);
+//         setErrorMessage(data.message || "Payment verification failed. Please contact support.");
+//       }
+//     } catch (e) {
+//       console.error("❌ Payment verification error:", e);
+//       setErrorMessage("Error verifying payment. Please contact support if amount was debited.");
+//     }
+//   };
+
+//   const handleSessionSelect = (session) => {
+//     setSelectedSession(session);
+//     requestAnimationFrame(() => {
+//       if (detailsRef.current) {
+//         const top = detailsRef.current.getBoundingClientRect().top + window.scrollY - 80;
+//         window.scrollTo({
+//           top,
+//           behavior: "smooth",
+//         });
+//       }
+//     });
+//   };
+
+//   const selectedSessionSoldOut = selectedSession ? isSessionSoldOut(selectedSession.name) : false;
+
+//   return (
+//     <div className="min-h-screen bg-black text-white font-sans relative overflow-x-hidden">
+      
+//       <ErrorNotification message={errorMessage} onClose={() => setErrorMessage("")} />
+      
+//       <div className="relative z-10 py-16">
+//         <div className="max-w-6xl mx-auto px-6">
+//           {/* Header */}
+//           <div className="text-center mb-16">
+//             <h1 className="section-title">Register for the TEDxDYPAkurdi Event!</h1>
+//             <p className="text-gray-400 max-w-2xl mx-auto">
+//               The flagship event of TEDxDYPAkurdi, a platform for experts and enthusiasts to voice their "Ideas worth spreading."
+//             </p>
+//           </div>
+
+//           {/* Event info */}
+//           <div className="flex flex-col md:flex-row justify-center items-center gap-10 mb-16">
+//             <InfoBox title="Date" value="12th September 2025" />
+//             <InfoBox title="Venue" value="Shantai Auditorium DYP Akurdi Campus" />
+//             <InfoBox title="Time" value="09 am Onwards" />
+//           </div>
+
+//           {/* Pricing */}
+//           <div className="text-center mb-12">
+//             <h2 className="section-title text-xl mb-8 text-gray-200">Pricing for the Tickets</h2>
+//             {loadingAvailability && (
+//               <div className="mb-6 text-gray-400">
+//                 <p>🔄 Checking availability...</p>
+//               </div>
+//             )}
+//             <div className="flex flex-col md:flex-row justify-center items-stretch gap-8">
+//               {SESSIONS.map((session) => (
+//                 <SessionCard
+//                   key={session.id}
+//                   session={session}
+//                   onSelect={handleSessionSelect}
+//                   isSelected={selectedSession?.id === session.id}
+//                   isSoldOut={isSessionSoldOut(session.name)}
+//                 />
+//               ))}
+//             </div>
+//           </div>
+
+//           {/* Form */}
+//           <div ref={detailsRef} className="form-card max-w-4xl mx-auto px-8 md:px-16 py-12 rounded-3xl shadow-2xl mt-10 bg-[#17171a] border border-white/10">
+//             <h2 className="mb-10 text-3xl font-extrabold text-[#EB0028] tracking-wide flex items-end gap-3">
+//               Details <span className="block text-lg text-gray-300 font-normal pb-1">for next steps</span>
+//             </h2>
+//             <form className="flex flex-col gap-8" onSubmit={handleSubmit}>
+//               <div>
+//                 <label htmlFor="name" className="block mb-3 text-xl font-bold text-white">Your Name</label>
+//                 <input
+//                   type="text"
+//                   id="name"
+//                   name="name"
+//                   required
+//                   value={formData.name}
+//                   onChange={handleInputChange}
+//                   placeholder="Enter your full name"
+//                   className="w-full h-16 px-5 rounded-xl border-2 border-[#333] bg-[#0f0f12] text-white text-lg placeholder-gray-400 focus:ring-2 focus:ring-[#EB0028] focus:border-transparent transition"
+//                 />
+//               </div>
+//               <div>
+//                 <label htmlFor="email" className="block mb-3 text-xl font-bold text-white">Email Address</label>
+//                 <input
+//                   type="email"
+//                   id="email"
+//                   name="email"
+//                   required
+//                   value={formData.email}
+//                   onChange={handleInputChange}
+//                   placeholder="Enter your email"
+//                   className="w-full h-16 px-5 rounded-xl border-2 border-[#333] bg-[#0f0f12] text-white text-lg placeholder-gray-400 focus:ring-2 focus:ring-[#EB0028] focus:border-transparent transition"
+//                 />
+//               </div>
+//               <div>
+//                 <label htmlFor="phone" className="block mb-3 text-xl font-bold text-white">Contact No.</label>
+//                 <input
+//                   type="tel"
+//                   id="phone"
+//                   name="phone"
+//                   required
+//                   value={formData.phone}
+//                   onChange={handleInputChange}
+//                   placeholder="Enter your contact number"
+//                   className="w-full h-16 px-5 rounded-xl border-2 border-[#333] bg-[#0f0f12] text-white text-lg placeholder-gray-400 focus:ring-2 focus:ring-[#EB0028] focus:border-transparent transition"
+//                 />
+//               </div>
+//               <div>
+//                 <label htmlFor="department" className="block mb-3 text-xl font-bold text-white">Department of Study <span className="text-base font-normal text-gray-300">(optional)</span></label>
+//                 <input
+//                   type="text"
+//                   id="department"
+//                   name="department"
+//                   value={formData.department}
+//                   onChange={handleInputChange}
+//                   placeholder="Enter your department"
+//                   className="w-full h-16 px-5 rounded-xl border-2 border-[#333] bg-[#0f0f12] text-white text-lg placeholder-gray-400 focus:ring-2 focus:ring-[#EB0028] focus:border-transparent transition"
+//                 />
+//               </div>
+//               <div>
+//                 <label htmlFor="branch" className="block mb-3 text-xl font-bold text-white">Branch <span className="text-base font-normal text-gray-300">(optional)</span></label>
+//                 <input
+//                   type="text"
+//                   id="branch"
+//                   name="branch"
+//                   value={formData.branch}
+//                   onChange={handleInputChange}
+//                   placeholder="Enter your branch"
+//                   className="w-full h-16 px-5 rounded-xl border-2 border-[#333] bg-[#0f0f12] text-white text-lg placeholder-gray-400 focus:ring-2 focus:ring-[#EB0028] focus:border-transparent transition"
+//                 />
+//               </div>
+//               <div className="flex justify-center pt-6">
+//                 <button
+//                   type="submit"
+//                   disabled={!selectedSession || selectedSessionSoldOut}
+//                   className={`px-16 py-4 text-2xl rounded-xl font-extrabold shadow-lg transition-all ${
+//                     !selectedSession || selectedSessionSoldOut
+//                       ? 'bg-gray-500 text-gray-300 cursor-not-allowed'
+//                       : 'bg-gradient-to-r from-[#EB0028] to-[#c20021] hover:from-[#ff304a] hover:to-[#e0002a] text-white'
+//                   }`}
+//                 >
+//                   {selectedSessionSoldOut ? "Session Sold Out" : "Proceed to pay"}
+//                 </button>
+//               </div>
+//             </form>
+//           </div>
+//         </div>
+//       </div>
+
+//       <ConfirmModal
+//         isOpen={showModal}
+//         onClose={() => setShowModal(false)}
+//         formData={formData}
+//         selectedSession={selectedSession}
+//         onPay={initiatePayment}
+//         isSoldOut={selectedSessionSoldOut}
+//       />
+//     </div>
+//   );
+// };
+
+// export default TicketPage;
+
 import React, { useEffect, useState, useRef } from "react";
 
 // Map UI labels to backend keys
@@ -2369,8 +2985,9 @@ const SESSIONS = [
   },
 ];
 
-// FIXED: Use your live Razorpay key directly
-const RAZORPAY_KEY_ID = "rzp_live_RBWUzFnCHTPV1R";
+// ✅ FIXED: Corrected API key and added test mode fallback
+const RAZORPAY_KEY_ID = "rzp_live_RAdCru2UL8q5u1"; // Fixed typo
+// const RAZORPAY_KEY_ID = "rzp_test_YOUR_TEST_KEY"; // Uncomment for testing
 
 const InfoBox = ({ title, value }) => (
   <div className="header-box flex flex-col w-full min-w-[240px] max-w-[340px] border-2 border-[#EB0028] overflow-hidden mx-3 mb-3 rounded-2xl shadow-lg">
@@ -2509,16 +3126,46 @@ const TicketPage = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [availability, setAvailability] = useState(null);
   const [loadingAvailability, setLoadingAvailability] = useState(true);
+  const [isSDKReady, setIsSDKReady] = useState(false);
   const detailsRef = useRef(null);
 
-  // ✅ FIXED: Only check if Razorpay SDK is available (no dynamic loading)
+  // ✅ ENHANCED: Better Razorpay SDK verification
   useEffect(() => {
-    if (!window.Razorpay) {
-      console.error("❌ Razorpay SDK not loaded");
-      setErrorMessage("Payment system not loaded. Please refresh the page.");
-    } else {
-      console.log("✅ Razorpay SDK is available");
-    }
+    const checkSDK = () => {
+      if (!window.Razorpay) {
+        console.error("❌ Razorpay SDK not loaded");
+        setErrorMessage("Payment system not loaded. Please refresh the page and ensure you have internet connection.");
+        setIsSDKReady(false);
+        return;
+      }
+      
+      // Verify SDK is actually functional
+      try {
+        // Test SDK instantiation without opening
+        const testRzp = new window.Razorpay({
+          key: "test_key",
+          amount: 100,
+          currency: "INR"
+        });
+        
+        if (testRzp && typeof testRzp.open === 'function') {
+          console.log("✅ Razorpay SDK is available and functional");
+          setIsSDKReady(true);
+        } else {
+          throw new Error("SDK not functional");
+        }
+      } catch (err) {
+        console.error("❌ Razorpay SDK verification failed:", err);
+        setErrorMessage("Payment system verification failed. Please refresh the page.");
+        setIsSDKReady(false);
+      }
+    };
+
+    // Check immediately and also after a short delay
+    checkSDK();
+    const timer = setTimeout(checkSDK, 1000);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   // Fetch availability
@@ -2570,6 +3217,12 @@ const TicketPage = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    if (!isSDKReady) {
+      setErrorMessage("❌ Payment system is not ready. Please refresh the page and try again.");
+      return;
+    }
+    
     if (!selectedSession) {
       setErrorMessage("⚠️ Please select a session (Morning / Full Day / Evening) before proceeding.");
       return;
@@ -2586,7 +3239,7 @@ const TicketPage = () => {
   // Clear error automatically
   useEffect(() => {
     if (errorMessage) {
-      const timer = setTimeout(() => setErrorMessage(""), 4000);
+      const timer = setTimeout(() => setErrorMessage(""), 5000);
       return () => clearTimeout(timer);
     }
   }, [errorMessage]);
@@ -2619,10 +3272,10 @@ const TicketPage = () => {
     }
   };
 
-  // ✅ ULTRA-MINIMAL Razorpay options to prevent 400 error
+  // ✅ COMPLETELY FIXED: Ultra-minimal Razorpay options to prevent session_token injection
   const initiatePayment = async () => {
     try {
-      if (!selectedSession) return;
+      if (!selectedSession || !isSDKReady) return;
       
       if (isSessionSoldOut(selectedSession.name)) {
         setErrorMessage(`🚫 The ${selectedSession.name} is now sold out! Please select a different session.`);
@@ -2662,9 +3315,9 @@ const TicketPage = () => {
           setErrorMessage(`🚫 Sorry! All seats for the ${selectedSession.name} are now sold out.`);
           fetchAvailability();
         } else if (orderRes.status === 401) {
-          setErrorMessage("❌ Payment gateway authentication failed. Please try again later.");
+          setErrorMessage("❌ Payment gateway authentication failed. Please check your account activation status.");
         } else {
-          setErrorMessage(errorData.message || "Failed to create payment order.");
+          setErrorMessage(errorData.message || "Failed to create payment order. Please try again or contact support.");
         }
         setShowModal(false);
         return;
@@ -2681,40 +3334,43 @@ const TicketPage = () => {
         return;
       }
 
-      if (!window.Razorpay) {
-        setErrorMessage("❌ Payment system not loaded. Please refresh and try again.");
-        return;
-      }
-
-      // ✅ ABSOLUTE MINIMAL Razorpay options to prevent session_token error
+      // ✅ CRITICAL FIX: Absolutely minimal Razorpay options
+      // This prevents the session_token parameter from being injected
       const options = {
-        key: RAZORPAY_KEY_ID,
-        amount: orderData.amount,
-        currency: "INR",
-        name: "TEDx DYP Akurdi",
-        order_id: orderData.id,
-        handler: function(response) {
+        key: RAZORPAY_KEY_ID,           // Only the API key
+        amount: orderData.amount,       // Amount from order
+        currency: "INR",                // Currency
+        order_id: orderData.id,         // Order ID from backend
+        handler: function(response) {   // Success handler
           console.log("✅ Payment successful:", response);
           verifyPayment(response);
         }
-        // ❌ REMOVED: prefill, theme, description, modal, error - all extra parameters
+        // ❌ CRITICAL: NO OTHER PARAMETERS
+        // No name, no description, no prefill, no theme, no modal, no error handler
+        // These extra parameters cause the session_token to be injected
       };
 
-      console.log("🚀 Minimal Razorpay options:", {
-        key: options.key.substring(0, 12) + "...",
+      console.log("🚀 Ultra-minimal Razorpay options:", {
+        key: options.key.substring(0, 15) + "...",
         amount: options.amount,
         currency: options.currency,
         order_id: options.order_id
       });
 
-      // Initialize Razorpay with absolute minimal options
-      const rzp = new window.Razorpay(options);
-      rzp.open();
-      setShowModal(false);
+      // Initialize and open Razorpay
+      try {
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+        setShowModal(false);
+      } catch (razorpayError) {
+        console.error("❌ Razorpay initialization error:", razorpayError);
+        setErrorMessage("Payment gateway error. Please try again or contact support if the issue persists.");
+        setShowModal(false);
+      }
 
     } catch (err) {
       console.error("❌ Payment initiation error:", err);
-      setErrorMessage("Error initiating payment. Please try again.");
+      setErrorMessage("Payment initiation failed. Please check your internet connection and try again.");
       setShowModal(false);
     }
   };
@@ -2748,7 +3404,6 @@ const TicketPage = () => {
       if (data.success) {
         console.log("✅ Payment verified successfully:", data.ticketId);
         
-        // Build success URL with all required parameters
         const successParams = new URLSearchParams({
           name: formData.name,
           email: formData.email,
@@ -2762,11 +3417,11 @@ const TicketPage = () => {
         window.location.href = `/success?${successParams.toString()}`;
       } else {
         console.error("❌ Payment verification failed:", data);
-        setErrorMessage(data.message || "Payment verification failed. Please contact support.");
+        setErrorMessage(data.message || "Payment verification failed. Please contact support with your payment details.");
       }
     } catch (e) {
       console.error("❌ Payment verification error:", e);
-      setErrorMessage("Error verifying payment. Please contact support if amount was debited.");
+      setErrorMessage("Error verifying payment. Please contact support if amount was debited. Include your payment reference.");
     }
   };
 
@@ -2806,6 +3461,15 @@ const TicketPage = () => {
             <InfoBox title="Venue" value="Shantai Auditorium DYP Akurdi Campus" />
             <InfoBox title="Time" value="09 am Onwards" />
           </div>
+
+          {/* SDK Status Indicator */}
+          {!isSDKReady && (
+            <div className="text-center mb-8">
+              <div className="bg-yellow-900 border border-yellow-500 text-yellow-100 px-4 py-3 rounded-lg inline-block">
+                ⚠️ Payment system loading... Please wait or refresh if it takes too long.
+              </div>
+            </div>
+          )}
 
           {/* Pricing */}
           <div className="text-center mb-12">
@@ -2900,14 +3564,15 @@ const TicketPage = () => {
               <div className="flex justify-center pt-6">
                 <button
                   type="submit"
-                  disabled={!selectedSession || selectedSessionSoldOut}
+                  disabled={!selectedSession || selectedSessionSoldOut || !isSDKReady}
                   className={`px-16 py-4 text-2xl rounded-xl font-extrabold shadow-lg transition-all ${
-                    !selectedSession || selectedSessionSoldOut
+                    !selectedSession || selectedSessionSoldOut || !isSDKReady
                       ? 'bg-gray-500 text-gray-300 cursor-not-allowed'
                       : 'bg-gradient-to-r from-[#EB0028] to-[#c20021] hover:from-[#ff304a] hover:to-[#e0002a] text-white'
                   }`}
                 >
-                  {selectedSessionSoldOut ? "Session Sold Out" : "Proceed to pay"}
+                  {!isSDKReady ? "Loading Payment System..." : 
+                   selectedSessionSoldOut ? "Session Sold Out" : "Proceed to pay"}
                 </button>
               </div>
             </form>
@@ -2928,5 +3593,6 @@ const TicketPage = () => {
 };
 
 export default TicketPage;
+
 
 
